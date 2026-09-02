@@ -14,15 +14,18 @@ https://github.com/dylanzhangzx/dknowc-ppt-assistant
 
 Title:
 
-v1.0.3 - GitHub public release
+v1.1.0 - GitHub public release
 
 Body:
 
 This is the skills.sh GitHub public release of 深知可信PPT (dknowc PPT assistant), an Agent Skill that generates genuinely editable native PowerPoint presentations with authoritative, source-linked content.
 
-Highlights:
+Highlights (v1.1.0):
 
 - Uses the skills.sh channel configuration.
+- v1.1.0 upgrades the provenance reports into verification-style reports: a first-screen verification sheet with five real computed metrics (source traceability, citation binding, freshness check, type coverage, self-check), report-style section cards, four-color source taxonomy with filtering, print/archive mode, `--stage outline|final` dual-stage adaptation, and hard validation before generation (refuses to render when materials exist but citations are missing, or citations exist but zero materials are extracted). Mobile-specific adaptations (680px breakpoint, bidirectional anchors, bottom-sheet material popups) included.
+- v1.1.0 also adds host-environment delivery (`deliver_outputs.py`, auto-detects WorkBuddy-style host workspaces and copies deliverables there), an SVG slide HTML preview page (`preview_slide_html.py`) for the first-page confirmation gate, and authoring-discipline hardening (no ghost citations; missing source links degrade to gentle notices instead of failing verification).
+
 - Native editable output: pages are hand-authored as constrained SVG and compiled by a deterministic converter into real shapes, text, charts and tables (`scripts/svg_to_pptx.py`) — not full-page images and not template filling.
 - Trusted content layer: factual materials (policy names, figures, cases) are retrieved via dknowc Trusted Search (`scripts/trusted_search.py`) from a corpus of authoritative documents; every claim is traceable.
 - Two confirmation gates (search plan, structure plan) plus SVG quality checks (`scripts/svg_quality_checker.py`) before export.
