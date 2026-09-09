@@ -47,19 +47,26 @@ def _looks_like_key(value: str) -> bool:
 
 
 def check_api_key_config():
-    api_key = os.environ.get(API_KEY_ENV, "").strip()
+    # 环境变量优先，缺失时从 ~/.zshrc 兜底解析（宿主进程早于 key 写入启动、
+    # 或宿主不再加载 ~/.zshrc 导出变量时不误报缺失，与公文写作同源方案）
+    try:
+        from api_key import resolve_api_key
+        api_key, source = resolve_api_key()
+    except ImportError:
+        api_key = os.environ.get(API_KEY_ENV, "").strip()
+        source = "environment" if api_key else ""
     if _looks_like_key(api_key):
         return {
             "api_key_configured": True,
             "api_key_env": API_KEY_ENV,
-            "api_key_source": "environment",
+            "api_key_source": source,
             "api_key_hint": None,
         }
     return {
         "api_key_configured": False,
         "api_key_env": API_KEY_ENV,
         "api_key_source": None,
-        "api_key_hint": f"本 Skill 的素材检索需要通过环境变量 {API_KEY_ENV} 连接深知可信智能服务。当前未检测到可用 Key，请先注册或登录深知可信智能 MaaS 账号获取 API Key，再注入该环境变量。",
+        "api_key_hint": f"本 Skill 的素材检索需要通过环境变量 {API_KEY_ENV}（或 ~/.zshrc 持久化）连接深知可信智能服务。当前两处均未检测到可用 Key，请先注册或登录深知可信智能 MaaS 账号获取 API Key。",
     }
 
 

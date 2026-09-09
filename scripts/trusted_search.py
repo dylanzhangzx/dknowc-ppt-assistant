@@ -21,6 +21,15 @@ DEFAULT_ENDPOINT = "https://open.dknowc.cn/dependable/search"
 SKILL_ROOT = Path(__file__).resolve().parent.parent
 SEARCH_RESULTS_DIR = SKILL_ROOT / "official-docs" / "search-results"
 
+def _resolve_key():
+    """环境变量优先，缺失时从 ~/.zshrc 兜底解析（宿主进程读不到 env 时不误报，与公文写作同源）。"""
+    try:
+        from api_key import resolve_api_key
+        key, _ = resolve_api_key()
+        return key
+    except ImportError:
+        return os.environ.get("DKNOWC_API_KEY")
+
 
 def resolve_output_json(output_path: str) -> Path:
     """把搜索结果 JSON 落到 official-docs/search-results/，阻断路径遍历。"""
@@ -288,7 +297,7 @@ def main() -> None:
         DEFAULT_ENDPOINT,
     )
     api_key = _pick(
-        os.environ.get("DKNOWC_API_KEY"),
+        _resolve_key(),
     )
 
     if not api_key:
