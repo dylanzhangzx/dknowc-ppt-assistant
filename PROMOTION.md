@@ -14,15 +14,18 @@ https://github.com/dylanzhangzx/dknowc-ppt-assistant
 
 Title:
 
-v1.1.0 - GitHub public release
+v1.2.0 - GitHub public release
 
 Body:
 
 This is the skills.sh GitHub public release of 深知可信PPT (dknowc PPT assistant), an Agent Skill that generates genuinely editable native PowerPoint presentations with authoritative, source-linked content.
 
-Highlights (v1.1.0):
+Highlights (v1.2.0):
 
 - Uses the skills.sh channel configuration.
+- v1.2.0 applies the 0907-meeting eight-part report redesign: report name unified to 溯源核验报告 with an official-document-style identity header; the five verification metrics renamed to human-readable wording (citation correspondence / material freshness / material composition / pre-delivery checks / current validity); original-passage identity labels with collapse for long excerpts; title chains showing article-section positions; gold high-credibility badges; `recalled_materials` grouping for retrieved-but-unused materials (excluded from citation statistics); search-condition filter pills; and a mobile side-by-side comparison sheet (AI-generated statement vs. original passage).
+- v1.2.0 also adds an API-key resolution fallback (`api_key.py`): process environment first, then ~/.zshrc parsing when the host process cannot see shell exports; outline page-plan tables drop the redundant evidence column (citations carry it); table evidence chips render in-cell instead of below the table.
+
 - v1.1.0 upgrades the provenance reports into verification-style reports: a first-screen verification sheet with five real computed metrics (source traceability, citation binding, freshness check, type coverage, self-check), report-style section cards, four-color source taxonomy with filtering, print/archive mode, `--stage outline|final` dual-stage adaptation, and hard validation before generation (refuses to render when materials exist but citations are missing, or citations exist but zero materials are extracted). Mobile-specific adaptations (680px breakpoint, bidirectional anchors, bottom-sheet material popups) included.
 - v1.1.0 also adds host-environment delivery (`deliver_outputs.py`, auto-detects WorkBuddy-style host workspaces and copies deliverables there), an SVG slide HTML preview page (`preview_slide_html.py`) for the first-page confirmation gate, and authoring-discipline hardening (no ghost citations; missing source links degrade to gentle notices instead of failing verification).
 
