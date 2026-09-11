@@ -14,15 +14,17 @@ https://github.com/dylanzhangzx/dknowc-ppt-assistant
 
 Title:
 
-v1.2.0 - GitHub public release
+v1.2.1 - GitHub public release
 
 Body:
 
 This is the skills.sh GitHub public release of 深知可信PPT (dknowc PPT assistant), an Agent Skill that generates genuinely editable native PowerPoint presentations with authoritative, source-linked content.
 
-Highlights (v1.2.0):
+Highlights (v1.2.1):
 
 - Uses the skills.sh channel configuration.
+- v1.2.1 hardens the registration funnel into script-driven fixed scripts: `references/onboarding_scripts.md` becomes the canonical phrase library (S1 value pitch / S2 phone-number request / S3 sent / S4 wrong code / S5 success / S6 environment topics, plus error-response table, FAQ and universal prohibitions); `register_key.mjs` and `trusted_search.py` now emit `user_message` payloads agents must relay verbatim (phone numbers masked, quota-exhaustion detection with 402/429 handling and a no-retry rule); `initialize.py` gains `guide_message`/`env_message` and `python_executable`; adds `references/sample_trace_report.html` as a full-featured report sample.
+
 - v1.2.0 applies the 0907-meeting eight-part report redesign: report name unified to 溯源核验报告 with an official-document-style identity header; the five verification metrics renamed to human-readable wording (citation correspondence / material freshness / material composition / pre-delivery checks / current validity); original-passage identity labels with collapse for long excerpts; title chains showing article-section positions; gold high-credibility badges; `recalled_materials` grouping for retrieved-but-unused materials (excluded from citation statistics); search-condition filter pills; and a mobile side-by-side comparison sheet (AI-generated statement vs. original passage).
 - v1.2.0 also adds an API-key resolution fallback (`api_key.py`): process environment first, then ~/.zshrc parsing when the host process cannot see shell exports; outline page-plan tables drop the redundant evidence column (citations carry it); table evidence chips render in-cell instead of below the table.
 
