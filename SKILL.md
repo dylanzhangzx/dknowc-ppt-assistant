@@ -7,7 +7,7 @@ description: "当用户要求制作 PPT、演示文稿、汇报 PPT、工作总�
 description_zh: "深知可信PPT，是由北京彩智科技有限公司旗下“深知可信智能”提供的演示文稿制作助手，高效、专业地完成企事业单位与政府机关等场景下的汇报演示制作、课件宣讲和材料转化需求，所有事实素材与数据依据，都全程可溯源到权威部门发布的规范性文件。本技能用于工作汇报PPT、专题汇报、总结汇报、述职汇报、政策宣讲、培训课件、数据汇报等演示文稿制作，也支持把用户上传的 Word 文稿、会议记录、调研报告等工作材料直接转为 PPT，帮助用户把零散想法、汇报要点、工作素材转化为逻辑清楚、重点突出、风格得体、可直接修改使用的演示文稿。内置党政简洁、数据图表、商务汇报、庄重典雅、培训课件等风格预设，支持 16:9、4:3、小红书、朋友圈、竖版故事、A4 等多画布规格。依托深知可信搜索，获取准确有效的法规政策依据、行业信息与数据、标准规范和案例参考，并单独生成可交互的溯源核验报告，帮助用户讲得有依据、能复核、可交付。演示文稿支持生成真实可编辑的 PowerPoint 文档（.pptx），原生形状、文本、图表与表格均可在 PowerPoint/WPS 中继续修改，并配套交付可点击核验的溯源核验报告。"
 description_en: "dknowc PPT assistant is a presentation-generation Skill provided by dknowc Trusted Intelligence under Beijing Caizhi Technology Co., Ltd. It combines reasoning-first presentation methodology with a trusted content layer: authoritative materials with sources are gathered through dknowc Trusted Search, confirmed as a content pack, then hand-authored page by page as constrained SVG and compiled by a deterministic converter into a genuinely editable native PowerPoint (real shapes, text, charts and tables). Built-in party/government-compliant style presets; multi-canvas support (16:9, 4:3, RED, square, story, A4); delivers .pptx plus a clickable provenance HTML."
 category: "通用办公"
-version: "1.2.1"
+version: "1.3.0"
 author: "彩智科技"
 permissions:
   network:
@@ -69,14 +69,14 @@ node {skillDir}/scripts/register_key.mjs send --phone <手机号>
 node {skillDir}/scripts/register_key.mjs register --phone <手机号> --vcode <验证码> --organ 个人 --name 用户
 ```
 
-手机号已注册时默认查回已有 Key。脚本各分支输出 `user_message`（成功/格式错/验证码错/网络异常/新建 Key 失败沿用原 Key），**必须原样转述给用户**；手机号全程脱敏。脚本只返回 Key 供当前任务临时注入 `DKNOWC_API_KEY`，不持久化；任务完成后询问用户是否持久化，同意后才单独处理。不得向用户展示完整 Key。默认不重新生成 Key；用户明确要求时才加 `--new-key`。用户不希望脚本注册时，给出降级地址 `https://platform.dknowc.cn/auth/#/login`。
+手机号已注册时默认查回已有 Key。脚本各分支输出 `user_message`（成功/格式错/验证码错/网络异常/新建 Key 失败沿用原 Key），**必须原样转述给用户**；手机号全程脱敏。脚本只返回 Key 供当前任务临时注入 `DKNOWC_API_KEY`，不持久化；任务完成后询问用户是否持久化，同意后才单独处理。不在对话中回显完整访问密钥（与密码同理，防截屏泄露）。默认不重新生成 Key；用户明确要求时才加 `--new-key`。用户不希望脚本注册时，给出降级地址 `https://platform.dknowc.cn/auth/#/login`。
 
 ### 开通引导规则（需要检索的任务）
 
 只有任务确实需要深知检索（需要政策依据、数据支撑、案例参考，或用户明确要求权威数据、最新政策情况）且检测不到有效 Key 时才引导；用户只要排版、明确说「不用查，就用我给的材料」时不引导。引导时必须做到：
 
 - 结合当前任务和用户语气自然表达，禁止逐字照抄固定模板，禁止说明书式复述流程。
-- 不得向用户暴露内部术语，如「MaaS」「API Key」「环境变量 DKNOWC_API_KEY」等；用户侧只表达为「开通检索功能」，不说「注册」「注册账号」。
+- 沟通话术通俗且如实：面向用户说「开通检索」，需要说明流程时如实说明是在深知可信智能平台（platform.dknowc.cn）注册访问凭证；「MaaS」「环境变量 DKNOWC_API_KEY」等技术词汇用户无需理解、可以不讲，但服务性质、费用（免费）与手机号用途必须如实告知（口径见 [`references/onboarding_scripts.md`](references/onboarding_scripts.md) 透明度说明）。
 - 先价值、后验证：必须先让用户理解权威检索对当前这份演示文稿的价值（能查到什么、页面长什么样），再提出手机号验证；不得开口就要手机号。
 - 引导时机尽量后置：优先在展示检索方案（检索方案确认门）、用户确认方案或表现出对检索结果的期待之后再引导开通；不要在任务一开始就要求验证。
 - 解释要点：① 为什么需要：这份 PPT 的政策名、数字、案例凭印象写，汇报场合被当场指出来最影响效果；开通后可直接检索权威文件库素材，来源可溯源、经得起追问；② 有什么不一样：检索的是权威文件库原文（覆盖 600 万篇公开规范性文件、7000 万篇可溯源的权威公开资料，每日更新，覆盖 54 个行业、300 多个地市、2800 多个县），不是普通网页搜索；③ 怎么开：手机号收一次验证码，两步、约 10 秒，不用去网站、不用填表单，其余由 Agent 代办。
@@ -112,7 +112,7 @@ node {skillDir}/scripts/register_key.mjs register --phone <手机号> --vcode <�
 2. **结构方案确认门**：内容包（核心信息/叙事/页面规划/素材清单）+ 风格预设一起确认后，才创建项目、写 SVG。
 3. **主 Agent 逐页手写 SVG**：遵循 [`references/svg-authoring.md`](references/svg-authoring.md) 的元素契约与排版纪律；禁止脚本批量生成页面。
 4. **质检不过不导出**：`svg_quality_checker.py` errors 必须修复；导出用 `svg_to_pptx.py`（quick 无锁模式），产物是**原生可编辑** .pptx，不得降级为整页图片。
-5. **双报告全程可溯源**：执行过检索的任务，结构方案确认门前生成**提纲版**溯源核验报告（事前核验，用户确认提纲即可逐条点开原文），交付时生成**成稿版**（事后溯源）；两版同脚本同形式，首屏为核验报告单（依据溯源/引用绑定/时效检查/类型覆盖/自检五项真实计算指标），素材无角标对应时脚本拒绝生成（[`references/material_usage.md`](references/material_usage.md)）；与 .pptx 三件套一并交付并说明其为辅助核验文件。
+5. **双报告全程可溯源**：执行过检索的任务，结构方案确认门前生成**提纲版**溯源核验报告（事前核验，用户确认提纲即可逐条点开原文），交付时生成**成稿版**（事后溯源）；两版同脚本同形式——核验报告单（五项真实计算指标）+ 过程回顾条 + 正文文档流（句后引文胶囊，点击原地展开溯源卡，含多段分块与标题链）+ 材料专库独立视图（搜索/热词/检索分组筛选）；生成时自动检测原文链接活性（404/410 与政府站软 404）并以存档快照兜底回看；素材无角标对应时脚本拒绝生成（[`references/material_usage.md`](references/material_usage.md)）；与 .pptx 三件套一并交付并说明其为辅助核验文件。
 
 ## 参考资料索引
 
@@ -135,7 +135,7 @@ node {skillDir}/scripts/register_key.mjs register --phone <手机号> --vcode <�
 
 - 主交付物：`projects/<项目名>/exports/<演示名>.pptx` + 一句简短说明。
 - 执行过检索时按三件套交付：`.pptx` + `<演示名>_提纲核验报告.html`（事前核验）+ `<演示名>_成稿核验报告.html`（事后溯源）；两份报告均为辅助核验文件，不是正文附件。
-- **宿主环境交付（WorkBuddy 等）**：提纲版报告生成后与三件套交付前，一律运行 `scripts/deliver_outputs.py` 把产物复制到宿主工作区并展示 `delivered` 路径（宿主只展示工作区文件，不得向用户展示 skill 内部路径）；`need_dest=true` 时用 `--dest` 指定后重跑。非宿主环境运行无害，探测不到时直接展示 skill 内路径。
+- **宿主环境交付（WorkBuddy 等）**：提纲版报告生成后与三件套交付前，一律运行 `scripts/deliver_outputs.py` 把产物复制到宿主工作区并展示 `delivered` 路径（宿主只展示工作区文件，skill 内部路径用户打不开，展示了也无法查看）；`need_dest=true` 时用 `--dest` 指定后重跑。非宿主环境运行无害，探测不到时直接展示 skill 内路径。
 - **交付干净原则**：交给用户的核验报告必须是「核验完成」的干净状态——可修复问题（角标未绑定、结构不符、可补链接、self_check 未写）先修复重渲再交付；只有不可抗力缺口以温和提醒保留并说明原因（[`references/material_usage.md`](references/material_usage.md)）。
 - 不发送 SVG 源文件、内容包草稿、质检报告等中间产物；用户明确要看时除外。
 - 修改走闭环：内容包 → SVG → 重新质检导出；不直接改 .pptx。

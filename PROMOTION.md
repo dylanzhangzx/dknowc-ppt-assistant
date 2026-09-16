@@ -14,15 +14,17 @@ https://github.com/dylanzhangzx/dknowc-ppt-assistant
 
 Title:
 
-v1.2.1 - GitHub public release
+v1.3.0 - GitHub public release
 
 Body:
 
 This is the skills.sh GitHub public release of 深知可信PPT (dknowc PPT assistant), an Agent Skill that generates genuinely editable native PowerPoint presentations with authoritative, source-linked content.
 
-Highlights (v1.2.1):
+Highlights (v1.3.0):
 
 - Uses the skills.sh channel configuration.
+- v1.3.0 performs a full redesign of the provenance verification report (aligned with the same-origin plan in the official-document-writing skill 3.7.0): continuous body text flow with inline citation capsules (numbered badge + material title, tap to expand the source card in place); a standalone material-library view (large search, real term-frequency hot words, retrieval-group tabs, cited/uncited filters); per-chapter citation badges with top-bar tools (body-only reading, copy-full-text, print/archive modes); a process-recap bar (retrieval -> ingest -> line-by-line compare -> verified, all real numbers); live link-activity checking (404/410 + soft-404 title sniffing on government sites, conservative pass on connect failures/403) with snapshot fallback (screenShotPath, auto-fills missing /A/ hierarchy) so verification status decouples from link status; multi-block material cards with breadcrumb chains; and a purple visual scheme. New flags `--skip-link-check` and `--disable-snapshot`.
+
 - v1.2.1 hardens the registration funnel into script-driven fixed scripts: `references/onboarding_scripts.md` becomes the canonical phrase library (S1 value pitch / S2 phone-number request / S3 sent / S4 wrong code / S5 success / S6 environment topics, plus error-response table, FAQ and universal prohibitions); `register_key.mjs` and `trusted_search.py` now emit `user_message` payloads agents must relay verbatim (phone numbers masked, quota-exhaustion detection with 402/429 handling and a no-retry rule); `initialize.py` gains `guide_message`/`env_message` and `python_executable`; adds `references/sample_trace_report.html` as a full-featured report sample.
 
 - v1.2.0 applies the 0907-meeting eight-part report redesign: report name unified to 溯源核验报告 with an official-document-style identity header; the five verification metrics renamed to human-readable wording (citation correspondence / material freshness / material composition / pre-delivery checks / current validity); original-passage identity labels with collapse for long excerpts; title chains showing article-section positions; gold high-credibility badges; `recalled_materials` grouping for retrieved-but-unused materials (excluded from citation statistics); search-condition filter pills; and a mobile side-by-side comparison sheet (AI-generated statement vs. original passage).

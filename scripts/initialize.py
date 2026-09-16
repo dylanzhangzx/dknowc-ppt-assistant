@@ -122,8 +122,8 @@ def check_environment():
         "也可以先不开通：我基于你手头的材料先把 PPT 做出来，政策和数据的位置先标注「数据待核验」。"
         "想先看看开通后自动生成的核验报告长什么样，我可以发你一份示例看看。"
     )
-    # env_message：依赖缺失时给用户的统一话术——不暴露组件名（requests/python-pptx 对用户无意义）；
-    # 就绪时不输出任何环境话题。多 Python 环境下检测口径以 python_executable 为准。
+    # env_message：依赖缺失时给用户的统一话术——用「小组件」等通俗说法（requests/python-pptx 等组件名
+    # 对用户无理解价值）；就绪时不输出环境话题。多 Python 环境下检测口径以 python_executable 为准。
     missing_basic = [k for k, ok in (("小组件", requests_available),) if not ok]
     missing_compile = 2 - int(python_pptx_available) - int(xlsxwriter_available)
     if blocking_issues or pptx_blocking_issues:
