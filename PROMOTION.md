@@ -14,15 +14,19 @@ https://github.com/dylanzhangzx/dknowc-ppt-assistant
 
 Title:
 
-v1.3.0 - GitHub public release
+v1.3.3 - GitHub public release
 
 Body:
 
 This is the skills.sh GitHub public release of 深知可信PPT (dknowc PPT assistant), an Agent Skill that generates genuinely editable native PowerPoint presentations with authoritative, source-linked content.
 
-Highlights (v1.3.0):
+Highlights (v1.3.3):
 
 - Uses the skills.sh channel configuration.
+- v1.3.3 adds call-attribution declaration (`X-Dknowc-Attribution`, `kind=skill;source=...;version=...;channel=...`): a single package-root `attribution.json` plus `scripts/attribution.py` construct the header, and both request-sending scripts (`trusted_search.py`, `register_key.mjs`) attach it so downloads, registrations and calls can be joined per channel. The version is resolved dynamically from SKILL.md.
+- v1.3.3 also adds an MCP-first key path: when the host exposes the dknowc workspace MCP with OAuth already granted, the API key is obtained through `create_api_key` and persisted via `register_key.mjs save-key` (key passed on stdin) without asking the user for a phone number; otherwise the flow falls back to the existing SMS registration.
+- v1.3.1-v1.3.2 (rolled up): retrieval unified onto the pure-script channel (the MCP retrieval channel was rolled back after unreliable large-result persistence, `mcp_convert.py` kept for future restore), multi-query retrieval now defaults to parallel execution with per-query immediate persistence, business-code validation (50001 is not written to disk and exits 1), JSON key persistence migrated to a dedicated per-machine config file with automatic legacy cleanup, the delivery chain was rewritten (host detection for WorkBuddy/Doubao, never-overwrite with `_v2` renaming, `--dest` guard, `--probe`), and the provenance report gained knowledge-library and source-article terminology, chapter TOC fixes, citation re-ordering, citation-scoped statistics, and versioned output.
+
 - v1.3.0 performs a full redesign of the provenance verification report (aligned with the same-origin plan in the official-document-writing skill 3.7.0): continuous body text flow with inline citation capsules (numbered badge + material title, tap to expand the source card in place); a standalone material-library view (large search, real term-frequency hot words, retrieval-group tabs, cited/uncited filters); per-chapter citation badges with top-bar tools (body-only reading, copy-full-text, print/archive modes); a process-recap bar (retrieval -> ingest -> line-by-line compare -> verified, all real numbers); live link-activity checking (404/410 + soft-404 title sniffing on government sites, conservative pass on connect failures/403) with snapshot fallback (screenShotPath, auto-fills missing /A/ hierarchy) so verification status decouples from link status; multi-block material cards with breadcrumb chains; and a purple visual scheme. New flags `--skip-link-check` and `--disable-snapshot`.
 
 - v1.2.1 hardens the registration funnel into script-driven fixed scripts: `references/onboarding_scripts.md` becomes the canonical phrase library (S1 value pitch / S2 phone-number request / S3 sent / S4 wrong code / S5 success / S6 environment topics, plus error-response table, FAQ and universal prohibitions); `register_key.mjs` and `trusted_search.py` now emit `user_message` payloads agents must relay verbatim (phone numbers masked, quota-exhaustion detection with 402/429 handling and a no-retry rule); `initialize.py` gains `guide_message`/`env_message` and `python_executable`; adds `references/sample_trace_report.html` as a full-featured report sample.

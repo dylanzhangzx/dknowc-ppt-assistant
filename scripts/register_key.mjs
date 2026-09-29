@@ -1,16 +1,78 @@
 #!/usr/bin/env node
 // MaaS key bootstrap helper for SkillHub Public.
-// It only requests/returns a key for the current task and never writes local files.
 //   node register_key.mjs send --phone <phone>
 //   node register_key.mjs register --phone <phone> --vcode <code> [--new-key]
+//   node register_key.mjs save-key    # MCP create_api_key 拿到的密钥落盘（stdin 优先，或 --api-key）
+
+import fs from "fs";
+import os from "os";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const DEFAULT_BASE = "https://platform.dknowc.cn/auth/home/userAuto";
 const DEFAULT_OPEN_BASE = "https://open.dknowc.cn";
 const DEFAULT_CHANNEL = "8C8D411C-6A46-4E99-887D-87D9A1329930";
 const DEFAULT_TYPE = "11";
-const DEFAULT_SOURCE = "agent";
+// 2026-09-29 调整：与统一来源声明（X-Dknowc-Attribution）的 source 对齐，
+// 不再用旧值 "agent"（与"来源统计最终方案 V1.0"的字段语义冲突）。
+const DEFAULT_SOURCE = "dknowc-ppt-assistant";
 const API_KEY_ENV = "DKNOWC_API_KEY";
 const MAAS_PLATFORM_URL = "https://platform.dknowc.cn/auth/#/login";
+// Key 持久化目标：本机专用配置文件（XDG 规范路径），不再依赖 ~/.zshrc。
+// 迁移：写入新文件成功后，清理 ~/.zshrc 中的历史 Key 块。
+const KEY_FILE_NAME = "api_key";
+const ZSHRC_START = "# >>> dknowc ppt assistant api key >>>";
+const ZSHRC_END = "# <<< dknowc ppt assistant api key <<<";
+// 历史 ~/.zshrc 标记块（含旧名），迁移期统一清理
+const LEGACY_BLOCKS = [
+  [ZSHRC_START, ZSHRC_END],
+  ["# >>> dknowc api key >>>", "# <<< dknowc api key <<<"],
+];
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function apiKeyFilePath() {
+  const home = os.homedir();
+  if (process.platform === "win32") {
+    const appdata = process.env.APPDATA || home;
+    return path.join(appdata, "dknowc", KEY_FILE_NAME);
+  }
+  const xdg = process.env.XDG_CONFIG_HOME || path.join(home, ".config");
+  return path.join(xdg, "dknowc", KEY_FILE_NAME);
+}
+
+function removeLegacyZshrcBlocks() {
+  // 迁移：从 ~/.zshrc 移除历史 Key 标记块（避免污染 shell 配置）
+  const zshrcPath = path.join(os.homedir(), ".zshrc");
+  try {
+    let existing = fs.existsSync(zshrcPath) ? fs.readFileSync(zshrcPath, "utf8") : "";
+    if (!existing) return;
+    let changed = false;
+    for (const [start, end] of LEGACY_BLOCKS) {
+      const re = new RegExp(`${escapeRegExp(start)}[\\s\\S]*?${escapeRegExp(end)}\\n?`, "m");
+      if (re.test(existing)) { existing = existing.replace(re, ""); changed = true; }
+    }
+    if (changed) fs.writeFileSync(zshrcPath, existing, { encoding: "utf8", mode: 0o600 });
+  } catch (e) { /* 清理失败不阻断写入流程 */ }
+}
+
+function writeApiKeyToConfigFile(apiKey) {
+  // 写本机专用配置文件（纯文本一行 Key，600 权限）；成功后清理历史 ~/.zshrc 块
+  const filePath = apiKeyFilePath();
+  try {
+    fs.mkdirSync(path.dirname(filePath), { recursive: true, mode: 0o700 });
+    fs.writeFileSync(filePath, `${String(apiKey).trim()}\n`, { encoding: "utf8", mode: 0o600 });
+    removeLegacyZshrcBlocks();
+    return { written: true, path: filePath, error: null };
+  } catch (e) {
+    return { written: false, path: filePath, error: e && e.message ? e.message : String(e) };
+  }
+}
 
 function parseArgs(argv) {
   const out = { _: [] };
@@ -32,13 +94,35 @@ function parseArgs(argv) {
   return out;
 }
 
+// —— 统一来源声明（X-Dknowc-Attribution）——
+// 读包根 attribution.json（kind/source/channel）+ SKILL.md 的 version；仅统计用、
+// 不参与鉴权；读取失败返回 null（不加头、不阻断请求）。
+function buildAttributionHeader() {
+  try {
+    const root = path.resolve(__dirname, "..");
+    const meta = JSON.parse(fs.readFileSync(path.join(root, "attribution.json"), "utf-8"));
+    if (!meta.source) return null;
+    const parts = [`kind=${meta.kind || "skill"}`, `source=${meta.source}`];
+    try {
+      const m = fs.readFileSync(path.join(root, "SKILL.md"), "utf-8").match(/^version:\s*"?([^"\n]+)"?/m);
+      if (m) parts.push(`version=${m[1].trim()}`);
+    } catch {}
+    if (meta.channel) parts.push(`channel=${meta.channel}`);
+    return parts.join(";");
+  } catch { return null; }
+}
+function withAttribution(headers) {
+  const attr = buildAttributionHeader();
+  return attr ? { ...headers, "X-Dknowc-Attribution": attr } : headers;
+}
+
 async function postJson(url, payload, headers = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 30000);
   try {
     const response = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...headers },
+      headers: withAttribution({ "Content-Type": "application/json", ...headers }),
       body: JSON.stringify(payload),
       signal: controller.signal,
     });
@@ -187,6 +271,12 @@ async function main() {
       }
     }
 
+    // 注册成功即写入本机专用配置文件（--no-persist 可关闭）：脚本直读文件，
+    // 避免宿主进程读不到环境变量造成"每任务重新注册"的误判。
+    const persistResult = registered && !args["no-persist"]
+      ? writeApiKeyToConfigFile(apiKey)
+      : { written: false, path: apiKeyFilePath(), error: null };
+
     // user_message：给用户的固定话术，Agent 必须原样转述，不得改写后发挥。
     const registered = Boolean(apiKey);
     let userMessage;
@@ -214,8 +304,12 @@ async function main() {
       envName: API_KEY_ENV,
       apiKey,
       apiKeyMasked: maskKey(apiKey),
-      currentTaskOnly: true,
-      persistInstruction: `本次返回的 apiKey 仅供当前任务临时注入 ${API_KEY_ENV}。任务完成后，建议用户在 SkillHub/WorkBuddy 平台环境变量或密钥配置中保存 ${API_KEY_ENV}。`,
+      keyFilePersisted: Boolean(persistResult.written),
+      keyFilePath: persistResult.path || null,
+      keyFileError: persistResult.error || null,
+      persistInstruction: persistResult.written
+        ? `访问密钥已写入本机专用配置文件（${persistResult.path}，仅本机、600 权限），后续任务直接读取、无需重复注册。`
+        : `本次返回的 apiKey 仅供当前任务临时注入 ${API_KEY_ENV}。任务完成后可在平台环境变量或密钥配置中保存 ${API_KEY_ENV}。`,
       fallbackRegisterUrl: MAAS_PLATFORM_URL,
       newKeyError,
       user_message: userMessage,
@@ -223,7 +317,42 @@ async function main() {
     process.exit(apiKey && !newKeyError ? 0 : 1);
   }
 
-  console.error("用法: node register_key.mjs <send|register> ...");
+  if (cmd === "save-key") {
+    // MCP create_api_key 拿到的密钥经 stdin 传入（避免出现在命令行参数与日志），--api-key 兜底
+    let key = "";
+    if (args["api-key"] && args["api-key"] !== true) {
+      key = String(args["api-key"]).trim();
+    } else {
+      key = await new Promise((resolve) => {
+        let buf = "";
+        process.stdin.setEncoding("utf8");
+        process.stdin.on("data", (chunk) => { buf += chunk; });
+        process.stdin.on("end", () => resolve(buf.trim()));
+      });
+    }
+    const looksValid = /^sk-/.test(key) && key.length >= 20;
+    if (!looksValid) {
+      console.log(JSON.stringify({
+        status: false,
+        user_message: "密钥格式不对（应以 sk- 开头），没有写入本机。请重新获取后再试。",
+      }));
+      process.exit(1);
+    }
+    const saved = writeApiKeyToConfigFile(key);
+    console.log(JSON.stringify({
+      status: Boolean(saved.written),
+      keyFilePath: saved.path || null,
+      keyFileError: saved.error || null,
+      envName: API_KEY_ENV,
+      apiKeyMasked: maskKey(key),
+      user_message: saved.written
+        ? "已通过你的深知可信工作台授权直接开通搜索功能，无需手机号验证，马上开始检索。"
+        : `密钥写入本机配置文件失败（${saved.error || "未知原因"}），本次可先用临时密钥继续，稍后再试。`,
+    }));
+    process.exit(saved.written ? 0 : 1);
+  }
+
+  console.error("用法: node register_key.mjs <send|register|save-key> ...");
   process.exit(2);
 }
 

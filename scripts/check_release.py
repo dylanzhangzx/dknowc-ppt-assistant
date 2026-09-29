@@ -35,7 +35,11 @@ ALLOWED_LICENSE_NAMES = {"THIRD_PARTY_NOTICES.md", "NOTICE.md"}
 ALLOWED_LICENSE_PREFIXES = ("LICENSE-",)
 ALLOWED_DATA_SUFFIXES = {".json", ".xml", ".txt"}
 BANNED_ARTIFACT_NAMES = {".DS_Store"}
-BANNED_ARTIFACT_SUFFIXES = {".pyc", ".pyo"}
+BANNED_ARTIFACT_SUFFIXES = {".pyc", ".pyo", ".bak", ".orig", ".rej"}
+# 开发期一次性补丁/临时脚本不得随包分发（2026-09-29 事故：_patch_rules_136.py
+# 因补丁脚本异常退出、清理命令未执行而残留，被后续打包带进 zip）。
+BANNED_DEV_SCRIPT_PREFIXES = ("_patch", "_tmp", "_scratch", "_wip")
+BANNED_DEV_SCRIPT_SUFFIXES = ("_tmp.py", "_scratch.py", "_patch.py")
 ALLOWED_API_KEY_VALUES = {
     "",
     "your_api_key_here",
@@ -70,6 +74,12 @@ def main():
             findings.append(f"{rel}: 公开包不得包含本地产物")
             continue
         if any(part in SKIP_PARTS for part in parts):
+            continue
+        if path.is_file() and (
+            path.name.lower().startswith(tuple(p.lower() for p in BANNED_DEV_SCRIPT_PREFIXES))
+            or path.name.lower().endswith(BANNED_DEV_SCRIPT_SUFFIXES)
+        ):
+            findings.append(f"{rel}: 公开包不得包含开发期补丁/临时脚本")
             continue
         if path.is_file() and path.name in BANNED_FILES:
             findings.append(f"{rel}: 公开包不得包含真实配置文件")

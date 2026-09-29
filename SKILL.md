@@ -7,7 +7,7 @@ description: "当用户要求制作 PPT、演示文稿、汇报 PPT、工作总�
 description_zh: "深知可信PPT，是由北京彩智科技有限公司旗下“深知可信智能”提供的演示文稿制作助手，高效、专业地完成企事业单位与政府机关等场景下的汇报演示制作、课件宣讲和材料转化需求，所有事实素材与数据依据，都全程可溯源到权威部门发布的规范性文件。本技能用于工作汇报PPT、专题汇报、总结汇报、述职汇报、政策宣讲、培训课件、数据汇报等演示文稿制作，也支持把用户上传的 Word 文稿、会议记录、调研报告等工作材料直接转为 PPT，帮助用户把零散想法、汇报要点、工作素材转化为逻辑清楚、重点突出、风格得体、可直接修改使用的演示文稿。内置党政简洁、数据图表、商务汇报、庄重典雅、培训课件等风格预设，支持 16:9、4:3、小红书、朋友圈、竖版故事、A4 等多画布规格。依托深知可信搜索，获取准确有效的法规政策依据、行业信息与数据、标准规范和案例参考，并单独生成可交互的溯源核验报告，帮助用户讲得有依据、能复核、可交付。演示文稿支持生成真实可编辑的 PowerPoint 文档（.pptx），原生形状、文本、图表与表格均可在 PowerPoint/WPS 中继续修改，并配套交付可点击核验的溯源核验报告。"
 description_en: "dknowc PPT assistant is a presentation-generation Skill provided by dknowc Trusted Intelligence under Beijing Caizhi Technology Co., Ltd. It combines reasoning-first presentation methodology with a trusted content layer: authoritative materials with sources are gathered through dknowc Trusted Search, confirmed as a content pack, then hand-authored page by page as constrained SVG and compiled by a deterministic converter into a genuinely editable native PowerPoint (real shapes, text, charts and tables). Built-in party/government-compliant style presets; multi-canvas support (16:9, 4:3, RED, square, story, A4); delivers .pptx plus a clickable provenance HTML."
 category: "通用办公"
-version: "1.3.0"
+version: "1.3.3"
 author: "彩智科技"
 permissions:
   network:
@@ -22,7 +22,7 @@ permissions:
     - "projects/ 项目目录（内容包、SVG、图片、质检报告、导出产物）"
     - "official-docs/ 检索结果与溯源中间文件"
     - "宿主环境工作区（如 WorkBuddy outputs/，仅用于 deliver_outputs.py 复制交付物）"
-    - "本机 ~/.zshrc 中的 DKNOWC_API_KEY 配置块（仅用户明确同意持久化时）"
+    - "本机 DKNOWC_API_KEY 专用配置文件（~/.config/dknowc/api_key，注册成功后写入；历史 ~/.zshrc 配置块仅迁移期读取）"
 secrets:
   - "DKNOWC_API_KEY"
 ---
@@ -53,11 +53,13 @@ python3 {skillDir}/scripts/initialize.py
 uv run --with python-pptx --with XlsxWriter python3 {skillDir}/scripts/svg_to_pptx.py ...
 ```
 
+初始化检查 API Key 可用性（读取顺序：进程环境变量 → 本机专用配置文件 `~/.config/dknowc/api_key` → 历史 `~/.zshrc` 块迁移兜底）。**素材检索统一走本 Skill 的 `trusted_search.py` 脚本通道**（需 API Key）：宿主 MCP「深知可信工作台」通道经实测**因大结果落盘不可靠**（模型抄写大 JSON 丢失、宿主工具结果过期，豆包 6 路实测 4 路结果无法读取）已停用——`mcp_convert.py` 保留在包内待技术侧改造完成后恢复，规则层不引用、不得改调 MCP 通道。未配置 Key 时按「统一 API Key 管理」引导开通。
+
 初始化不要求用户提供单位或个人信息，不上传检测结果。
 
 ## 统一 API Key 管理
 
-skills.sh 版不内置 API Key。MaaS 注册取 Key 两步执行（`scripts/register_key.mjs`，固定 `type=11`、渠道码 `8C8D411C-6A46-4E99-887D-87D9A1329930`、`source="agent"`）：
+skills.sh 版不内置 API Key。MaaS 注册取 Key 两步执行（`scripts/register_key.mjs`，固定 `type=11`、渠道码 `8C8D411C-6A46-4E99-887D-87D9A1329930`、`source="dknowc-ppt-assistant"`）：
 
 ```bash
 node {skillDir}/scripts/register_key.mjs send --phone <手机号>
@@ -69,7 +71,15 @@ node {skillDir}/scripts/register_key.mjs send --phone <手机号>
 node {skillDir}/scripts/register_key.mjs register --phone <手机号> --vcode <验证码> --organ 个人 --name 用户
 ```
 
-手机号已注册时默认查回已有 Key。脚本各分支输出 `user_message`（成功/格式错/验证码错/网络异常/新建 Key 失败沿用原 Key），**必须原样转述给用户**；手机号全程脱敏。脚本只返回 Key 供当前任务临时注入 `DKNOWC_API_KEY`，不持久化；任务完成后询问用户是否持久化，同意后才单独处理。不在对话中回显完整访问密钥（与密码同理，防截屏泄露）。默认不重新生成 Key；用户明确要求时才加 `--new-key`。用户不希望脚本注册时，给出降级地址 `https://platform.dknowc.cn/auth/#/login`。
+手机号已注册时默认查回已有 Key。脚本各分支输出 `user_message`（成功/格式错/验证码错/网络异常/新建 Key 失败沿用原 Key），**必须原样转述给用户**；手机号全程脱敏。注册成功后脚本自动把 Key 写入本机专用配置文件（`~/.config/dknowc/api_key`，600 权限、仅本机）并清理历史 `~/.zshrc` 块，后续任务直读文件、无需重复注册；脚本同时返回 Key 供当前任务注入 `DKNOWC_API_KEY`。不在对话中回显完整访问密钥（与密码同理，防截屏泄露）。默认不重新生成 Key；用户明确要求时才加 `--new-key`。用户不希望脚本注册时，给出降级地址 `https://platform.dknowc.cn/auth/#/login`。
+
+### MCP 取 Key 优先（需检索且本机无可用 Key 时先走这条）
+
+先判断宿主是否提供「深知可信工作台」（dknowc-mcp）的 MCP 工具——在可用工具中查找 `create_api_key`（经工具检索加载，常见名 `mcp__dknowc-mcp__create_api_key`），按下列顺序处理：
+
+1. **工具存在且调用成功**（返回顶层 JSON `{"apiKey": "sk-…"}`，非标准 MCP content 包裹）：把密钥经 stdin 交给脚本落盘——`printf '%s' "<密钥>" | node {skillDir}/scripts/register_key.mjs save-key`（避免密钥出现在命令行参数与日志），**密钥不得在对话正文中展示**；落盘成功后转述脚本 `user_message`（S0 口径），重跑 `python3 {skillDir}/scripts/initialize.py` 确认为就绪，再继续任务。
+2. **工具不存在、或返回 OAuth 未授权类错误**（如"请先完成 MCP OAuth 授权"）：**直接回落手机号验证码注册流程**（见下），不反复重试 MCP 取 Key、不向用户提及 MCP 内部细节。
+3. 该路径用户已完成平台授权，**不走 S1 的额度话术、不索要手机号**；仅当本机无可用 Key 时才尝试（不要在有 Key 时重复取）。
 
 ### 开通引导规则（需要检索的任务）
 
@@ -108,11 +118,11 @@ node {skillDir}/scripts/register_key.mjs register --phone <手机号> --vcode <�
 
 完整步骤、确认门与强制命令见 [`workflows/generate-pptx.md`](workflows/generate-pptx.md)。核心硬规则：
 
-1. **检索方案确认门**：主题模式下先展示检索方案（地域、每条 query 目的、素材类型、使用边界），用户确认后**串行**执行 `scripts/trusted_search.py`，禁止并发。
+1. **检索方案确认门**：主题模式下先展示检索方案（地域、每条 query 原文与信息需求、素材类型、使用边界），用户确认后执行 `scripts/trusted_search.py`——同方案内多路**默认并行**（每路独立 `--output`，单批不超过 4 路，后台并行、全部结束后逐路检查结果）；失败路单独串行重试一次；任意一路额度用尽整批即停；平台明显限流（多路同时报错）回退逐路串行。
 2. **结构方案确认门**：内容包（核心信息/叙事/页面规划/素材清单）+ 风格预设一起确认后，才创建项目、写 SVG。
 3. **主 Agent 逐页手写 SVG**：遵循 [`references/svg-authoring.md`](references/svg-authoring.md) 的元素契约与排版纪律；禁止脚本批量生成页面。
 4. **质检不过不导出**：`svg_quality_checker.py` errors 必须修复；导出用 `svg_to_pptx.py`（quick 无锁模式），产物是**原生可编辑** .pptx，不得降级为整页图片。
-5. **双报告全程可溯源**：执行过检索的任务，结构方案确认门前生成**提纲版**溯源核验报告（事前核验，用户确认提纲即可逐条点开原文），交付时生成**成稿版**（事后溯源）；两版同脚本同形式——核验报告单（五项真实计算指标）+ 过程回顾条 + 正文文档流（句后引文胶囊，点击原地展开溯源卡，含多段分块与标题链）+ 材料专库独立视图（搜索/热词/检索分组筛选）；生成时自动检测原文链接活性（404/410 与政府站软 404）并以存档快照兜底回看；素材无角标对应时脚本拒绝生成（[`references/material_usage.md`](references/material_usage.md)）；与 .pptx 三件套一并交付并说明其为辅助核验文件。
+5. **双报告全程可溯源**：执行过检索的任务，结构方案确认门前生成**提纲版**溯源核验报告（事前核验，用户确认提纲即可逐条点开原文），交付时生成**成稿版**（事后溯源）；两版同脚本同形式——核验报告单（五项真实计算指标）+ 过程回顾条 + 正文文档流（句后引文胶囊，点击原地展开溯源卡，含多段分块与标题链）+ 知识专库独立视图（搜索/热词/检索分组筛选）；生成时自动检测原文链接活性（404/410 与政府站软 404）并以存档快照兜底回看；素材无角标对应时脚本拒绝生成（[`references/material_usage.md`](references/material_usage.md)）；与 .pptx 三件套一并交付并说明其为辅助核验文件。
 
 ## 参考资料索引
 
