@@ -281,9 +281,9 @@ async function main() {
     const registered = Boolean(apiKey);
     let userMessage;
     if (registered && data.existed) {
-      userMessage = "这个手机号之前开通过，已直接找回原来的密钥和额度，不用重新注册。我马上开始检索。";
+      userMessage = "这个手机号之前开通过，已直接找回原来的密钥和积分，不用重新注册。我马上开始检索。";
     } else if (registered) {
-      userMessage = "开通成功，访问密钥已写入本机，300 次免费检索额度已生效。我马上开始检索。";
+      userMessage = "开通成功，访问密钥已写入本机，注册赠送的 10 万积分已到账。我马上开始检索。";
     } else if (/vcode|验证码/i.test(String(result.msg || ""))) {
       userMessage = `验证码校验没通过（可能是输入有误或已过期）。请核对 ${maskPhone(args.phone)} 最新一条短信的 6 位验证码重新发我；需要我重新发送一条，直接说一声。`;
     } else {
