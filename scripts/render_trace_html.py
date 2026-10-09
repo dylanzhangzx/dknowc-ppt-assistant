@@ -15,7 +15,7 @@
   接口提供存档快照（screenShotPath）时作为**附加回看入口**与原文链接并存
   （路径容错补 /A/、纯本地格式校验）
 
-PPT 特有口径（与公文写作的差异，均为产品决策）：
+PPT 特有口径（与公文写作版本的既定差异）：
 - 提醒制：数据缺口（缺原文链接/缺摘录）不判不通过、指标恒绿附温和提醒；只有无素材/
   正文无角标/角标未绑定三种真实错误才判不通过
 - 双版 stage：提纲版（事前核验）与成稿版（事后溯源）同脚本同形式，标题与身份章带版本后缀
@@ -329,7 +329,7 @@ def source_from_article(item: Dict[str, Any], index: int, segment: Optional[Dict
     if not isinstance(source["used"], bool):
         source["used"] = True
     # 存档快照（接口 screenShotPath）：**附加回看入口**，与原文链接并存展示。
-    # 2026-10-08 起不做链接连通性检测（徐总指示"直接给结果"）：接口返回的链接
+    # 2026-10-08 起不做链接连通性检测（链接原样给出）：接口返回的链接
     # 原样进报告，"打不开"不再由脚本判定、也不隐藏链接。
     source["snapshot"] = first_str(item.get("快照链接"), item.get("snapshot"), item.get("screenShotPath"))
     # 发布日期可信度（实测：「高」=模型治理入库、标题模型精抽；「较高」=门户抓取、标题规则提取）
@@ -1114,7 +1114,7 @@ def render_verify_panel(v: Dict[str, Any], stage: str = "final") -> str:
                    f'<span class="d">检索 JSON 没写入 self_check（默认查：{esc(default_names)}）</span></div>')
 
     # 3.7.2 起「现行效力」提示行移除：该提示对用户无操作价值，policy_count
-    # 保留在计算层不再展示（对齐公文写作 3.7.2 徐总产品要求）。
+    # 保留在计算层不再展示（对齐公文写作 3.7.2 口径）。
 
     what = "提纲页面规划" if stage == "outline" else "页面级结论"
     return f"""
@@ -2267,7 +2267,7 @@ def render_html(payload: Dict[str, Any], title: str, answer_override: str = "", 
     doc_title, sections = group_sections(blocks)
     display_title = doc_title or title
     report_label = f"{REPORT_NAME}（{stage_label}）"
-    # 「原问题」行（徐总 10-05："要加上完整的原问题，不然无法独立使用"）：
+    # 「原问题」行（2026-10-05 反馈：要加上完整的原问题，否则报告无法独立使用）：
     # **只采信 --question 显式传入的用户原话**，不得用报告/演示标题冒充
     # （标题是正文首行或文件名的来源，不是用户问的话）；未传入时整行不渲染。
     origin_question = (question_override or "").strip()

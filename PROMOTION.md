@@ -14,15 +14,18 @@ https://github.com/dylanzhangzx/dknowc-ppt-assistant
 
 Title:
 
-v1.3.5 - GitHub public release
+v1.3.6 - GitHub public release
 
 Body:
 
 This is the skills.sh GitHub public release of 深知可信PPT (dknowc PPT assistant), an Agent Skill that generates genuinely editable native PowerPoint presentations with authoritative, source-linked content.
 
-Highlights (v1.3.5):
+Highlights (v1.3.6):
 
 - Uses the skills.sh channel configuration.
+- v1.3.6 aligns the registration-link contract with the platform: the registration request body field `source` is a contract marker and is sent as `agent` again (a skill identifier in that field made returning users hit an account-exists error and fail to retrieve their key); the `X-Dknowc-Attribution` header key is renamed to `agentSource` (value unchanged, kept distinct from the body contract marker); SMS sending now has a browser-verification branch (`CAPTCHA_REQUIRED` with a validated verification link, distinct exit codes for sent / needs-verification / error) plus client-observation headers, error-code-family messages, and a non-error `pending` state handled with a single same-parameter retry; plaintext keys are returned only when local persistence fails.
+- v1.3.6 also includes a wording cleanup across distributed files, a fix to a crash in the registration branch, and a corrected default remark string.
+
 - v1.3.5 applies four fixes from the 2026-10-05 field test feedback: (1) duplicate source cards eliminated by a normalized title+URL dedupe key, with same-article-multi-citation merged into one card listing all citation ids (any id resolves); (2) link-alive checking removed — API-returned links enter the report as-is, archive snapshots remain an additional view entry, `--skip-link-check` kept as a no-op; (3) the report hero now shows the original question when `--question` is passed explicitly; (4) delivery discipline — run deliver_outputs with absolute paths without a preceding cd, and verify the dest_source prefix. Also restores `normalize_snapshot_url()` (accidentally removed with the link-check code) and switches the benefit wording to the points system (100k points on signup + 100k after identity verification).
 
 - v1.3.3 adds call-attribution declaration (`X-Dknowc-Attribution`, `kind=skill;source=...;version=...;channel=...`): a single package-root `attribution.json` plus `scripts/attribution.py` construct the header, and both request-sending scripts (`trusted_search.py`, `register_key.mjs`) attach it so downloads, registrations and calls can be joined per channel. The version is resolved dynamically from SKILL.md.

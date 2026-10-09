@@ -7,7 +7,7 @@ description: "当用户要求制作 PPT、演示文稿、汇报 PPT、工作总�
 description_zh: "深知可信PPT，是由北京彩智科技有限公司旗下“深知可信智能”提供的演示文稿制作助手，高效、专业地完成企事业单位与政府机关等场景下的汇报演示制作、课件宣讲和材料转化需求，所有事实素材与数据依据，都全程可溯源到权威部门发布的规范性文件。本技能用于工作汇报PPT、专题汇报、总结汇报、述职汇报、政策宣讲、培训课件、数据汇报等演示文稿制作，也支持把用户上传的 Word 文稿、会议记录、调研报告等工作材料直接转为 PPT，帮助用户把零散想法、汇报要点、工作素材转化为逻辑清楚、重点突出、风格得体、可直接修改使用的演示文稿。内置党政简洁、数据图表、商务汇报、庄重典雅、培训课件等风格预设，支持 16:9、4:3、小红书、朋友圈、竖版故事、A4 等多画布规格。依托深知可信搜索，获取准确有效的法规政策依据、行业信息与数据、标准规范和案例参考，并单独生成可交互的溯源核验报告，帮助用户讲得有依据、能复核、可交付。演示文稿支持生成真实可编辑的 PowerPoint 文档（.pptx），原生形状、文本、图表与表格均可在 PowerPoint/WPS 中继续修改，并配套交付可点击核验的溯源核验报告。"
 description_en: "dknowc PPT assistant is a presentation-generation Skill provided by dknowc Trusted Intelligence under Beijing Caizhi Technology Co., Ltd. It combines reasoning-first presentation methodology with a trusted content layer: authoritative materials with sources are gathered through dknowc Trusted Search, confirmed as a content pack, then hand-authored page by page as constrained SVG and compiled by a deterministic converter into a genuinely editable native PowerPoint (real shapes, text, charts and tables). Built-in party/government-compliant style presets; multi-canvas support (16:9, 4:3, RED, square, story, A4); delivers .pptx plus a clickable provenance HTML."
 category: "通用办公"
-version: "1.3.5"
+version: "1.3.6"
 author: "彩智科技"
 permissions:
   network:
@@ -59,19 +59,19 @@ uv run --with python-pptx --with XlsxWriter python3 {skillDir}/scripts/svg_to_pp
 
 ## 统一 API Key 管理
 
-skills.sh 版不内置 API Key。MaaS 注册取 Key 两步执行（`scripts/register_key.mjs`，固定 `type=11`、渠道码 `8C8D411C-6A46-4E99-887D-87D9A1329930`、`source="dknowc-ppt-assistant"`）：
+skills.sh 版不内置 API Key。MaaS 注册取 Key 两步执行（`scripts/register_key.mjs`，固定 `type=11`、渠道码 `8C8D411C-6A46-4E99-887D-87D9A1329930`、`source="agent"`——注册 body 的 `source` 是注册 API 的**合同标记**，服务端按它放行「老用户直接返 Key」，必须为 `agent`、不得传 skill 标识；调用来源统计走请求头 `X-Dknowc-Attribution` 的 `agentSource` 字段，值由脚本自动读包根 `attribution.json`，两者互不影响）：
 
 ```bash
 node {skillDir}/scripts/register_key.mjs send --phone <手机号>
 ```
 
-返回 `status=true` 后暂停，向用户索取 6 位验证码，不得编造。然后：
+退出码三态：`0`＝短信已直发，暂停向用户索取 6 位验证码，不得编造；`2`＝需用户在验证页完成验证（短信**尚未发送**），原样转述脚本 `user_message`（含经安全校验的验证链接与脱敏手机号）后暂停等待——用户在页面完成验证后**不得再调 send**，只等短信码；`1`＝错误（限频/链接过期/供应商失败/结果未确认等，按脚本 `user_message` 与话术库报错表处理）。然后：
 
 ```bash
 node {skillDir}/scripts/register_key.mjs register --phone <手机号> --vcode <验证码> --organ 个人 --name 用户
 ```
 
-手机号已注册时默认查回已有 Key。脚本各分支输出 `user_message`（成功/格式错/验证码错/网络异常/新建 Key 失败沿用原 Key），**必须原样转述给用户**；手机号全程脱敏。注册成功后脚本自动把 Key 写入本机专用配置文件（`~/.config/dknowc/api_key`，600 权限、仅本机）并清理历史 `~/.zshrc` 块，后续任务直读文件、无需重复注册；脚本同时返回 Key 供当前任务注入 `DKNOWC_API_KEY`。不在对话中回显完整访问密钥（与密码同理，防截屏泄露）。默认不重新生成 Key；用户明确要求时才加 `--new-key`。用户不希望脚本注册时，给出降级地址 `https://platform.dknowc.cn/auth/#/login`。
+手机号已注册时默认查回已有 Key。register 可能返回 `pending:true`（账号已创建、密钥准备中）——**非错误**：不重新注册、不重新发码，等用户示意后用同一手机号与验证码重试一次（短信码 5 分钟有效）。脚本各分支输出 `user_message`（成功/格式错/验证码错/已存在未取回/网络异常/新建 Key 失败沿用原 Key），**必须原样转述给用户**；手机号全程脱敏。注册成功后脚本自动把 Key 写入本机专用配置文件（`~/.config/dknowc/api_key`，600 权限、仅本机）并清理历史 `~/.zshrc` 块，后续任务直读文件、无需重复注册；仅当落盘失败时脚本才返回明文 Key 供当前任务注入 `DKNOWC_API_KEY`。不在对话中回显完整访问密钥（与密码同理，防截屏泄露）。默认不重新生成 Key；用户明确要求时才加 `--new-key`。用户不希望脚本注册时，给出降级地址 `https://platform.dknowc.cn/auth/#/login`。
 
 ### MCP 取 Key 优先（需检索且本机无可用 Key 时先走这条）
 
