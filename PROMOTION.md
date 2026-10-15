@@ -14,15 +14,18 @@ https://github.com/dylanzhangzx/dknowc-ppt-assistant
 
 Title:
 
-v1.3.6 - GitHub public release
+v1.3.7 - GitHub public release
 
 Body:
 
 This is the skills.sh GitHub public release of 深知可信PPT (dknowc PPT assistant), an Agent Skill that generates genuinely editable native PowerPoint presentations with authoritative, source-linked content.
 
-Highlights (v1.3.6):
+Highlights (v1.3.7):
 
 - Uses the skills.sh channel configuration.
+- v1.3.7 fixes horizontal overflow of knowledge-library cards (four CSS rules in `render_trace_html.py`): the list track uses `minmax(0,1fr)` instead of `1fr` (both desktop and mobile breakpoints), cards carry `min-width:0`, and the print block constrains rich excerpts (`overflow-x:visible`) and tables (`width:100%!important;min-width:0`). Root cause: `1fr` behaves as `minmax(auto,1fr)`, so a wide table inside a card stretched the track and displaced the card (verified with a 16-column table: page overflow 1598px to 960px viewport, card 1548px to 860px).
+- v1.3.7 also adds a delivery-manifest discipline: the manifest contains only the three deliverables under `projects/<name>/exports/`, each delivered exactly once (no duplicate intermediate report alongside the archived one), paths listed explicitly one by one, and intermediate artefacts (search JSON, answer files, content packs, SVG, QA reports) are never delivered.
+
 - v1.3.6 aligns the registration-link contract with the platform: the registration request body field `source` is a contract marker and is sent as `agent` again (a skill identifier in that field made returning users hit an account-exists error and fail to retrieve their key); the `X-Dknowc-Attribution` header key is renamed to `agentSource` (value unchanged, kept distinct from the body contract marker); SMS sending now has a browser-verification branch (`CAPTCHA_REQUIRED` with a validated verification link, distinct exit codes for sent / needs-verification / error) plus client-observation headers, error-code-family messages, and a non-error `pending` state handled with a single same-parameter retry; plaintext keys are returned only when local persistence fails.
 - v1.3.6 also includes a wording cleanup across distributed files, a fix to a crash in the registration branch, and a corrected default remark string.
 
