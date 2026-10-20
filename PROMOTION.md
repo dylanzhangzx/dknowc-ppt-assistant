@@ -14,15 +14,17 @@ https://github.com/dylanzhangzx/dknowc-ppt-assistant
 
 Title:
 
-v1.3.7 - GitHub public release
+v1.3.8 - GitHub public release
 
 Body:
 
 This is the skills.sh GitHub public release of 深知可信PPT (dknowc PPT assistant), an Agent Skill that generates genuinely editable native PowerPoint presentations with authoritative, source-linked content.
 
-Highlights (v1.3.7):
+Highlights (v1.3.8):
 
 - Uses the skills.sh channel configuration.
+- v1.3.8 changes the retrieval default parameter `simplified` from `true` to `false`: field testing showed `simplified=true` drops each article's archive snapshot `screenShotPath` (an additional view entry in the provenance report), so the default now preserves snapshots and aligns with the trusted-search and official-document skills; `--simplified` becomes an explicit opt-in for condensed output (help text notes the snapshot loss), `--no-simplified` is kept as a compatible no-op, and all other defaults are unchanged (policy/item/knowBase=true, return_full_content=false, segmentCount=2).
+
 - v1.3.7 fixes horizontal overflow of knowledge-library cards (four CSS rules in `render_trace_html.py`): the list track uses `minmax(0,1fr)` instead of `1fr` (both desktop and mobile breakpoints), cards carry `min-width:0`, and the print block constrains rich excerpts (`overflow-x:visible`) and tables (`width:100%!important;min-width:0`). Root cause: `1fr` behaves as `minmax(auto,1fr)`, so a wide table inside a card stretched the track and displaced the card (verified with a 16-column table: page overflow 1598px to 960px viewport, card 1548px to 860px).
 - v1.3.7 also adds a delivery-manifest discipline: the manifest contains only the three deliverables under `projects/<name>/exports/`, each delivered exactly once (no duplicate intermediate report alongside the archived one), paths listed explicitly one by one, and intermediate artefacts (search JSON, answer files, content packs, SVG, QA reports) are never delivered.
 

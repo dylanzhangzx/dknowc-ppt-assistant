@@ -96,7 +96,9 @@ def _build_payload(args: argparse.Namespace) -> Dict[str, Any]:
         "item": False if args.no_item else True,
         "knowBase": False if args.no_know_base else True,
         "return_full_content": args.return_full_content,
-        "simplified": False if args.no_simplified else True,
+        # simplified 默认 False：True 会丢每篇材料的存档快照 screenShotPath（接口 2026-10-20 实测），
+        # 快照是报告的附加回看入口；需要精炼输出时显式传 --simplified。
+        "simplified": True if args.simplified else False,
     }
 
     segment_count = args.segment_count if args.segment_count is not None else 2
@@ -353,8 +355,8 @@ def main() -> None:
     parser.add_argument("--no-know-base", action="store_true", help="不返回知识专库链接")
     parser.add_argument("--return-full-content", action="store_true", help="返回资料全文")
     parser.add_argument("--segment-count", type=int, help="每篇材料最多返回段落数")
-    parser.add_argument("--simplified", action="store_true", help="精炼输出")
-    parser.add_argument("--no-simplified", action="store_true", help="不剔除材料")
+    parser.add_argument("--simplified", action="store_true", help="精炼输出（会丢存档快照 screenShotPath，默认关闭）")
+    parser.add_argument("--no-simplified", action="store_true", help="兼容保留：默认已不精炼，无需传此参数")
     parser.add_argument("--max-articles", type=int, default=3, help="摘要最多展示材料数")
     parser.add_argument("--max-paragraphs", type=int, default=1, help="每篇材料最多展示段落数")
     parser.add_argument("--paragraph-chars", type=int, default=1200, help="每段最多展示字符数")

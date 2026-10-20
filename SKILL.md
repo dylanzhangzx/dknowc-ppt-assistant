@@ -7,7 +7,7 @@ description: "当用户要求制作 PPT、演示文稿、汇报 PPT、工作总�
 description_zh: "深知可信PPT，是由北京彩智科技有限公司旗下“深知可信智能”提供的演示文稿制作助手，高效、专业地完成企事业单位与政府机关等场景下的汇报演示制作、课件宣讲和材料转化需求，所有事实素材与数据依据，都全程可溯源到权威部门发布的规范性文件。本技能用于工作汇报PPT、专题汇报、总结汇报、述职汇报、政策宣讲、培训课件、数据汇报等演示文稿制作，也支持把用户上传的 Word 文稿、会议记录、调研报告等工作材料直接转为 PPT，帮助用户把零散想法、汇报要点、工作素材转化为逻辑清楚、重点突出、风格得体、可直接修改使用的演示文稿。内置党政简洁、数据图表、商务汇报、庄重典雅、培训课件等风格预设，支持 16:9、4:3、小红书、朋友圈、竖版故事、A4 等多画布规格。依托深知可信搜索，获取准确有效的法规政策依据、行业信息与数据、标准规范和案例参考，并单独生成可交互的溯源核验报告，帮助用户讲得有依据、能复核、可交付。演示文稿支持生成真实可编辑的 PowerPoint 文档（.pptx），原生形状、文本、图表与表格均可在 PowerPoint/WPS 中继续修改，并配套交付可点击核验的溯源核验报告。"
 description_en: "dknowc PPT assistant is a presentation-generation Skill provided by dknowc Trusted Intelligence under Beijing Caizhi Technology Co., Ltd. It combines reasoning-first presentation methodology with a trusted content layer: authoritative materials with sources are gathered through dknowc Trusted Search, confirmed as a content pack, then hand-authored page by page as constrained SVG and compiled by a deterministic converter into a genuinely editable native PowerPoint (real shapes, text, charts and tables). Built-in party/government-compliant style presets; multi-canvas support (16:9, 4:3, RED, square, story, A4); delivers .pptx plus a clickable provenance HTML."
 category: "通用办公"
-version: "1.3.7"
+version: "1.3.8"
 author: "彩智科技"
 permissions:
   network:
