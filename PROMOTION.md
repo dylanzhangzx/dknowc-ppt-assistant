@@ -14,15 +14,18 @@ https://github.com/dylanzhangzx/dknowc-ppt-assistant
 
 Title:
 
-v1.3.8 - GitHub public release
+v1.4.0 - GitHub public release
 
 Body:
 
 This is the skills.sh GitHub public release of 深知可信PPT (dknowc PPT assistant), an Agent Skill that generates genuinely editable native PowerPoint presentations with authoritative, source-linked content.
 
-Highlights (v1.3.8):
+Highlights (v1.4.0):
 
 - Uses the skills.sh channel configuration.
+- v1.4.0 switches trusted search to the V2 endpoint (`/open-api/maas/dependable/v2/search`): `searchType` is now a required single value (default `policy`; illegal or mixed values are rejected), retrieval routes map to `policy` / `govSite`, and defaults are pinned to `segmentCount=4` and `MaterialLength=18000`; success is judged on `ret==0` plus `content.code==200` with structured business errors carrying `ret`/`tid`. V2 article-level fields (effective/expiry dates, article type, knowledge-library link) enter the source cards, and document numbers are taken only from interface fields.
+- v1.4.0 also hardens the generated provenance HTML against injection (aligned with the official-document skill's review fix): table sanitizing moves to an HTMLParser element-level allowlist (defeating `<svg/onload>`-style bypasses), `safe_url()` allows only http/https on every href, the footer JSON is character-escaped via `dumps_for_script()`, and malformed tables (data rows wrapped in thead) are auto-corrected. Additionally, merged search JSONs may carry a supplementary-search record block making follow-up searches transparent (process bar shows search-route and increment details).
+
 - v1.3.8 changes the retrieval default parameter `simplified` from `true` to `false`: field testing showed `simplified=true` drops each article's archive snapshot `screenShotPath` (an additional view entry in the provenance report), so the default now preserves snapshots and aligns with the trusted-search and official-document skills; `--simplified` becomes an explicit opt-in for condensed output (help text notes the snapshot loss), `--no-simplified` is kept as a compatible no-op, and all other defaults are unchanged (policy/item/knowBase=true, return_full_content=false, segmentCount=2).
 
 - v1.3.7 fixes horizontal overflow of knowledge-library cards (four CSS rules in `render_trace_html.py`): the list track uses `minmax(0,1fr)` instead of `1fr` (both desktop and mobile breakpoints), cards carry `min-width:0`, and the print block constrains rich excerpts (`overflow-x:visible`) and tables (`width:100%!important;min-width:0`). Root cause: `1fr` behaves as `minmax(auto,1fr)`, so a wide table inside a card stretched the track and displaced the card (verified with a 16-column table: page overflow 1598px to 960px viewport, card 1548px to 860px).
