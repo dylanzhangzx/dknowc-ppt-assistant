@@ -14,15 +14,18 @@ https://github.com/dylanzhangzx/dknowc-ppt-assistant
 
 Title:
 
-v1.4.0 - GitHub public release
+v1.5.0 - GitHub public release
 
 Body:
 
 This is the skills.sh GitHub public release of 深知可信PPT (dknowc PPT assistant), an Agent Skill that generates genuinely editable native PowerPoint presentations with authoritative, source-linked content.
 
-Highlights (v1.4.0):
+Highlights (v1.5.0):
 
 - Uses the skills.sh channel configuration.
+- v1.5.0 pins down quality-gate and loop discipline (from a real WorkBuddy run that looped 11 rounds on warnings): pass equals `svg_quality_checker.py` exit 0 with errors=0 (`passed-with-warnings` passes; warnings never block export or delivery), the fix loop is capped at 3 rounds fixing only errors and clear factual mistakes, after export there is no going back (no re-checking, no screenshot self-review, no re-export unless the user asks), and exports use fixed artifact names.
+- v1.5.0 also slims SKILL.md by a third (163 to 118 lines) by moving initialization, registration and onboarding details verbatim into `references/initialization.md`; absorbs the official-document skill's 3.9.1/3.9.2 rules — document numbers come only from the article-level field (missing numbers no longer trigger supplementary searches) and the two-source fact rule (page facts come from user materials plus trusted-search results; model assumptions may shape structure but never enter pages as concrete facts without a source or a to-verify mark); and `deliver_outputs.py` now enforces a deliverable type whitelist (only .pptx and .html are copied to the host workspace, intermediates are rejected with a stderr warning).
+
 - v1.4.0 switches trusted search to the V2 endpoint (`/open-api/maas/dependable/v2/search`): `searchType` is now a required single value (default `policy`; illegal or mixed values are rejected), retrieval routes map to `policy` / `govSite`, and defaults are pinned to `segmentCount=4` and `MaterialLength=18000`; success is judged on `ret==0` plus `content.code==200` with structured business errors carrying `ret`/`tid`. V2 article-level fields (effective/expiry dates, article type, knowledge-library link) enter the source cards, and document numbers are taken only from interface fields.
 - v1.4.0 also hardens the generated provenance HTML against injection (aligned with the official-document skill's review fix): table sanitizing moves to an HTMLParser element-level allowlist (defeating `<svg/onload>`-style bypasses), `safe_url()` allows only http/https on every href, the footer JSON is character-escaped via `dumps_for_script()`, and malformed tables (data rows wrapped in thead) are auto-corrected. Additionally, merged search JSONs may carry a supplementary-search record block making follow-up searches transparent (process bar shows search-route and increment details).
 

@@ -420,11 +420,21 @@ def copy_without_overwrite(src: Path, dest: Path) -> dict:
 def collect_files(args_files: list[str]) -> list[Path]:
     if args_files:
         files = []
+        rejected: list[str] = []
         for name in args_files:
             p = Path(name).expanduser()
             if not p.is_absolute():
                 p = (SKILL_ROOT / p).resolve() if (SKILL_ROOT / p).is_file() else p.resolve()
+            # 交付物类型白名单（对齐公文写作 3.9.2 同款防护）：只接受 .pptx 与 .html。
+            # .md / .clean.md / .json 等一律是中间产物（渲染器的 clean.md、检索 JSON、
+            # 答案文件），把它们复制到宿主工作区＝交付事故（豆包实测发生过）。
+            if p.suffix.lower() not in (".pptx", ".html"):
+                rejected.append(str(p))
+                continue
             files.append(p)
+        if rejected:
+            print(f"警告：已拒绝非交付物类型（仅接受 .pptx/.html）：{'、'.join(rejected)}", file=sys.stderr)
+            print("（.md/.clean.md/JSON 等中间产物不复制到宿主工作区）", file=sys.stderr)
         return files
     # 未指定文件：取报告初始输出目录与各项目 exports/ 最近窗口内新建的文件
     now = time.time()
