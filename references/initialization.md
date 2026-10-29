@@ -24,19 +24,39 @@ uv run --with python-pptx --with XlsxWriter python3 {skillDir}/scripts/svg_to_pp
 
 ## 2. 统一 API Key 管理（注册取 Key 全流程）
 
-SkillHub 版不内置 API Key。MaaS 注册取 Key 两步执行（`scripts/register_key.mjs`，固定 `type=11`、渠道码 `7F9FBE52-849B-43FE-BB88-220E2A415FD8`、`source="agent"`——注册 body 的 `source` 是注册 API 的**合同标记**，服务端按它放行「老用户直接返 Key」，必须为 `agent`、不得传 skill 标识；调用来源统计走请求头 `X-Dknowc-Attribution` 的 `agentSource` 字段，值由脚本自动读包根 `attribution.json`，两者互不影响）：
+SkillHub 版不内置 API Key。MaaS 注册取 Key 三步执行（`scripts/register_key.mjs`，固定 `type=11`、渠道码 `7F9FBE52-849B-43FE-BB88-220E2A415FD8`、`source="agent"`——注册 body 的 `source` 是注册 API 的**合同标记**，服务端按它放行「老用户直接返 Key」，必须为 `agent`、不得传 skill 标识；调用来源统计走请求头 `X-Dknowc-Attribution` 的 `agentSource` 字段，值由脚本自动读包根 `attribution.json`，两者互不影响）。平台要求 Agent 先答一道文字题再发码，题目由 Agent 当场计算，**不把题目发给用户**：
 
 ```bash
-node {skillDir}/scripts/register_key.mjs send --phone <手机号>
+node {skillDir}/scripts/register_key.mjs challenge --phone <手机号>
 ```
 
-退出码三态：`0`＝短信已直发，暂停向用户索取 6 位验证码，不得编造；`2`＝需用户在验证页完成验证（短信**尚未发送**），原样转述脚本 `user_message`（含经安全校验的验证链接与脱敏手机号）后暂停等待——用户在页面完成验证后**不得再调 send**，只等短信码；`1`＝错误（限频/链接过期/供应商失败/结果未确认等，按脚本 `user_message` 与话术库报错表处理）。然后：
+challenge 读取官方注册指引并领题，只调用一次、不自动重试，按退出码与 JSON 分流。**平台回退自动兜底**：若官方指引不可用（文字题接口尚未上线，或平台临时回退到旧版发码接口），challenge 自动改走原有短信直发分支——退出 0 即表示验证码已发送（`code:"SMS_SENT"`），此路径**不需要调用 answer**，直接等用户 6 位验证码；退出 2 为人工验证链接。输出字段 `flow` 为 `agent-text` 表示走文字题流程，为 `legacy` 表示走旧发码分支，两种对用户等价：
+
+- **退出 0（`status:true`）**：JSON 里带 `<question>.prompt` 与 `answerFormat`。直接按题意计算，用非负整数调用下一步；**题目、token、答题过程都不进入对话**。若返回 `reused:true`，表示本机已有同一手机号未过期的题目，直接沿用，不重新请求。
+- **退出 2（`code:"HUMAN_REQUIRED"`）**：平台要求人工完成图片验证，转述脚本 `user_message`（含经校验的验证链接），暂停自动流程，等持有人完成验证并提供短信验证码。链接一次性、约 10 分钟有效，仅私下展示给手机号持有人，不得拼改、转发或贴群。
+- **退出 1（错误）**：按脚本 `user_message` 处理——限频（`SMS_RATE_LIMIT`）、目标锁定（`AGENT_TEXT_TARGET_LOCKED`）、服务不可用（`AGENT_TEXT_UNAVAILABLE`）、号码被拒（`SMS_REQUEST_REJECTED`）、结果未确认各有专门话术与停点（见 [`onboarding_scripts.md`](onboarding_scripts.md) 报错表）；不循环重试、不换手机号、不换接口绕过。
+
+```bash
+node {skillDir}/scripts/register_key.mjs answer --phone <手机号> --answer <非负整数>
+```
+
+answer 提交答案；答对即申请发码，按退出码分流：
+
+- **退出 0（`SMS_SENT`）**：转述脚本 `user_message`（含脱敏号码与「最新一条」提示），等用户提供 6 位验证码；不得重复调 answer。
+- **退出 3（`AGENT_TEXT_RETRY`）**：答错已换新题，JSON 带新的 `question`。重新计算后再次调用 answer，含首次最多 3 次；**不得把 attempt 重置、不得重复领题刷机会**。
+- **退出 2（`HUMAN_REQUIRED`）**：转人工，按上一条的链接话术处理。
+- **退出 4（`RESULT_UNKNOWN`）**：发送结果未确认（超时/断网）。先让持有人看手机，**不得自动重发、不得重新领题**；用户确认没收到后再由用户要求重试。
+- **退出 1（错误）**：按 `user_message` 停止本轮，不绕过。
 
 ```bash
 node {skillDir}/scripts/register_key.mjs register --phone <手机号> --vcode <验证码> --organ 个人 --name 用户
 ```
 
 手机号已注册时默认查回已有 Key。register 可能返回 `pending:true`（账号已创建、密钥准备中）——**非错误**：不重新注册、不重新发码，等用户示意后用同一手机号与验证码重试一次（短信码 5 分钟有效）。脚本各分支输出 `user_message`（成功/格式错/验证码错/已存在未取回/网络异常/新建 Key 失败沿用原 Key），**必须原样转述给用户**；手机号全程脱敏。注册成功后脚本自动把 Key 写入本机专用配置文件（`~/.config/dknowc/api_key`，600 权限、仅本机）并清理历史 `~/.zshrc` 块，后续任务直读文件、无需重复注册；仅当落盘失败时脚本才返回明文 Key 供当前任务注入 `DKNOWC_API_KEY`。不在对话中回显完整访问密钥（与密码同理，防截屏泄露）。默认不重新生成 Key；用户明确要求时才加 `--new-key`。用户不希望脚本注册时，给出降级地址 `https://platform.dknowc.cn/auth/#/login`。
+
+领题状态由脚本自行保存（`~/.config/dknowc/maas_agent_challenge.json`，600 权限，含会话 Cookie、题目与 attempt），challenge 与 answer 之间不需要也不允许手工传 token；发码成功、转人工或终态失败后脚本自动清除。同一手机号存在未过期题目时复用，不重复领题。
+
+验证链路安全红线：验证链接、短信验证码、密码与密钥不写入公共日志、群聊或长期记忆；答题过程、题目 token 与领题会话不进入对话正文、不落盘到工作目录；不代用户打开验证页、不模拟或绕过任何验证、不伪造验证凭据；对用户只说「验证链接/验证页面」，不出现验证码组件、滑条、行为验证等内部术语。
 
 ## 3. MCP 取 Key 优先（需检索且本机无可用 Key 时先走这条）
 
@@ -54,7 +74,7 @@ node {skillDir}/scripts/register_key.mjs register --phone <手机号> --vcode <�
 - 沟通话术通俗且如实：面向用户说「开通检索」，需要说明流程时如实说明是在深知可信智能平台（platform.dknowc.cn）注册访问凭证；「MaaS」「环境变量 DKNOWC_API_KEY」等技术词汇用户无需理解、可以不讲，但服务性质、费用（免费）与手机号用途必须如实告知（口径见 [`onboarding_scripts.md`](onboarding_scripts.md) 透明度说明）。
 - 先价值、后验证：必须先让用户理解权威检索对当前这份演示文稿的价值（能查到什么、页面长什么样），再提出手机号验证；不得开口就要手机号。
 - 引导时机尽量后置：优先在展示检索方案（检索方案确认门）、用户确认方案或表现出对检索结果的期待之后再引导开通；不要在任务一开始就要求验证。
-- 解释要点：① 为什么需要：这份 PPT 的政策名、数字、案例凭印象写，汇报场合被当场指出来最影响效果；开通后可直接检索权威文件库素材，来源可溯源、经得起追问；② 有什么不一样：检索的是权威文件库原文（覆盖 600 万篇公开规范性文件、7000 万篇可溯源的权威公开资料，每日更新，覆盖 54 个行业、300 多个地市、2800 多个县），不是普通网页搜索；③ 怎么开：手机号收一次验证码，两步、约 10 秒，不用去网站、不用填表单，其余由 Agent 代办。
+- 解释要点：① 为什么需要：这份 PPT 的政策名、数字、案例凭印象写，汇报场合被当场指出来最影响效果；开通后可直接检索权威文件库素材，来源可溯源、经得起追问；② 有什么不一样：检索的是权威文件库原文（覆盖 600 万篇公开规范性文件、7000 万篇可溯源的权威公开资料，每日更新，覆盖 54 个行业、300 多个地市、2800 多个县），不是普通网页搜索；③ 怎么开：手机号收一次验证码，两步、约 10 秒，不用自己填注册表，其余由 Agent 代办。
 - 安全与边界说明（用户问起或犹豫时按需说明，不点名具体平台）：手机号仅用于本次验证，不发营销短信、不打营销电话；本 Skill 已通过所在平台的安全审核上架，服务由北京彩智科技提供；验证后只在本机保存一个访问密钥，用户的材料、文稿和演示文稿不会上传，检索时只发送检索词；不用了可随时注销。
 - 给退路：用户拒绝或犹豫时，不得反复劝说、不得纠缠；转入材料模式继续制作，政策、数据处使用醒目的「数据待核验」「依据待补」类占位标注，交付时提醒用户这些位置尚未经权威核验；用户后续主动提出开通时再执行注册。
 - 交付后轻提示：未配置 Key 的用户完成 PPT 交付后，可自然带一句「以后做要引用政策、数据的汇报 PPT，可开通权威检索，每条依据带原文出处」；每个任务最多提示一次，不追问、不重复。

@@ -7,7 +7,7 @@ description: "当用户要求制作 PPT、演示文稿、汇报 PPT、工作总�
 description_zh: "深知可信PPT，是由北京彩智科技有限公司旗下“深知可信智能”提供的演示文稿制作助手，高效、专业地完成企事业单位与政府机关等场景下的汇报演示制作、课件宣讲和材料转化需求，所有事实素材与数据依据，都全程可溯源到权威部门发布的规范性文件。本技能用于工作汇报PPT、专题汇报、总结汇报、述职汇报、政策宣讲、培训课件、数据汇报等演示文稿制作，也支持把用户上传的 Word 文稿、会议记录、调研报告等工作材料直接转为 PPT，帮助用户把零散想法、汇报要点、工作素材转化为逻辑清楚、重点突出、风格得体、可直接修改使用的演示文稿。内置党政简洁、数据图表、商务汇报、庄重典雅、培训课件等风格预设，支持 16:9、4:3、小红书、朋友圈、竖版故事、A4 等多画布规格。依托深知可信搜索，获取准确有效的法规政策依据、行业信息与数据、标准规范和案例参考，并单独生成可交互的溯源核验报告，帮助用户讲得有依据、能复核、可交付。演示文稿支持生成真实可编辑的 PowerPoint 文档（.pptx），原生形状、文本、图表与表格均可在 PowerPoint/WPS 中继续修改，并配套交付可点击核验的溯源核验报告。"
 description_en: "dknowc PPT assistant is a presentation-generation Skill provided by dknowc Trusted Intelligence under Beijing Caizhi Technology Co., Ltd. It combines reasoning-first presentation methodology with a trusted content layer: authoritative materials with sources are gathered through dknowc Trusted Search, confirmed as a content pack, then hand-authored page by page as constrained SVG and compiled by a deterministic converter into a genuinely editable native PowerPoint (real shapes, text, charts and tables). Built-in party/government-compliant style presets; multi-canvas support (16:9, 4:3, RED, square, story, A4); delivers .pptx plus a clickable provenance HTML."
 category: "通用办公"
-version: "1.5.0"
+version: "1.5.1"
 author: "彩智科技"
 permissions:
   network:
@@ -35,7 +35,7 @@ secrets:
 
 ## 权限说明
 
-本 Skill 访问 `https://open.dknowc.cn/` 用于深知可信搜索素材检索；访问 `https://platform.dknowc.cn/` 用于 MaaS 手机号验证码注册与 API Key 获取说明。运行中读取本 Skill 的规则、契约与项目文件，写入 `projects/` 项目工作区（内容包、SVG、图片、导出产物）和 `official-docs/` 中间文件。API Key 只通过环境变量 `DKNOWC_API_KEY` 注入，不硬编码、不写入公开包、不在对话中展示完整内容。
+本 Skill 访问 `https://open.dknowc.cn/` 用于深知可信搜索素材检索；访问 `https://platform.dknowc.cn/` 用于 MaaS 手机号验证码注册与 API Key 获取说明（含读取官方 Agent 注册指引、领取注册文字题并提交答案的 `platform.dknowc.cn/maas/identity-center/maas/login/`）。运行中读取本 Skill 的规则、契约与项目文件，写入 `projects/` 项目工作区（内容包、SVG、图片、导出产物）和 `official-docs/` 中间文件。API Key 只通过环境变量 `DKNOWC_API_KEY` 注入，不硬编码、不写入公开包、不在对话中展示完整内容。
 
 ## 启动初始化
 
@@ -43,7 +43,7 @@ secrets:
 
 ## 统一 API Key 管理
 
-skills.sh 版不内置 API Key。需检索且本机无 Key 时：**宿主提供「深知可信工作台」MCP 的 `create_api_key` 工具且已授权 → 优先经 `register_key.mjs save-key` 落盘**（密钥经 stdin、不在对话展示；不索要手机号、不走积分话术）；否则走手机号验证码注册两步（`send` → `register`，固定 `type=11`、渠道码 `8C8D411C-…`、body `source="agent"` 合同标记）。**脚本各分支输出的 `user_message` 必须原样转述**；手机号全程脱敏；Key 自动落盘本机配置文件；不在对话回显完整密钥。注册全流程（退出码三态、`pending:true`、`--new-key`、降级地址、MCP 取 Key 三分支）见 [`references/initialization.md`](references/initialization.md)。
+skills.sh 版不内置 API Key。需检索且本机无 Key 时：**宿主提供「深知可信工作台」MCP 的 `create_api_key` 工具且已授权 → 优先经 `register_key.mjs save-key` 落盘**（密钥经 stdin、不在对话展示；不索要手机号、不走积分话术）；否则走手机号验证码注册三步（`challenge` 领题 → `answer` 作答 → `register` 取 Key，固定 `type=11`、渠道码 `8C8D411C-…`、body `source="agent"` 合同标记）。**文字题由 Agent 当场计算，不把题目发给用户、token 与会话不进对话不写日志**。**脚本各分支输出的 `user_message` 必须原样转述**；手机号全程脱敏；Key 自动落盘本机配置文件；不在对话回显完整密钥。注册全流程（challenge/answer 退出码、`pending:true`、`--new-key`、降级地址、MCP 取 Key 三分支、legacy 兜底）见 [`references/initialization.md`](references/initialization.md)。
 
 ### 开通引导规则（需要检索的任务）
 
