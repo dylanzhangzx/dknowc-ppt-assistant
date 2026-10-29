@@ -18,13 +18,32 @@ python3 {skillDir}/scripts/initialize.py
 uv run --with python-pptx --with XlsxWriter python3 {skillDir}/scripts/svg_to_pptx.py ...
 ```
 
-初始化检查 API Key 可用性（读取顺序：进程环境变量 → 本机专用配置文件 `~/.config/dknowc/api_key` → 历史 `~/.zshrc` 块迁移兜底）。**素材检索统一走本 Skill 的 `trusted_search.py` 脚本通道**（需 API Key）：宿主 MCP「深知可信工作台」通道经实测**因大结果落盘不可靠**（模型抄写大 JSON 丢失、宿主工具结果过期，豆包 6 路实测 4 路结果无法读取）已停用——`mcp_convert.py` 保留在包内待技术侧改造完成后恢复，规则层不引用、不得改调 MCP 通道。
+初始化检查 API Key 可用性（读取顺序：进程环境变量 → 本机专用配置文件 `~/.config/dknowc/api_key` → 历史 `~/.zshrc` 块只读兜底；脚本默认**不修改** `~/.zshrc`，仅在显式传 `--clean-zshrc` 时清理历史标记块）。**素材检索统一走本 Skill 的 `trusted_search.py` 脚本通道**（需 API Key）。`mcp_convert.py` 为历史转换工具，随包保留、规则层不引用。
 
 初始化不要求用户提供单位或个人信息，不上传检测结果。
 
+
+### 依赖清单（完整）
+
+**基础**：`python3`（3.10+）。缺失时暂停全部能力。
+
+**注册脚本**：`node`（18+），仅 `scripts/register_key.mjs` 需要；已配置 Key 的纯检索任务不依赖 Node。
+
+**编译导出**：`python-pptx`（唯一硬依赖）、`XlsxWriter`（可选增强，缺失时走 openpyxl / 内置回退）。缺失时可用隔离环境提供：
+
+```bash
+uv run --with python-pptx --with XlsxWriter python3 {skillDir}/scripts/svg_to_pptx.py ...
+```
+
+**其他 Python 依赖**：`requests`（可选，检索走标准库 urllib）、`Pillow`（图片预览与位图处理）、`cairosvg` / `svglib` + `reportlab`（SVG→PDF/位图渲染路径）、`PyYAML`（YAML 配置工具）、`openpyxl`（XLSX 数据处理的回退路径）、`skia-pathops`（布尔形状）、`uharfbuzz`（文字轮廓）——均为可选，缺失时对应功能自动降级，不影响主流程。
+
+**外部命令**（仅对应工具需要）：`ffprobe`（媒体时长探测）、ImageMagick `magick`（位图转换）、`uv`（隔离依赖环境）。
+
+`scripts/initialize.py` 会区分「阻断」与「可选」：python3 缺失阻断全部；编译依赖缺失只影响导出（可用 uv 隔离补齐）；其余缺失只提示、不阻断。
+
 ## 2. 统一 API Key 管理（注册取 Key 全流程）
 
-SkillHub 版不内置 API Key。MaaS 注册取 Key 三步执行（`scripts/register_key.mjs`，固定 `type=11`、渠道码 `7F9FBE52-849B-43FE-BB88-220E2A415FD8`、`source="agent"`——注册 body 的 `source` 是注册 API 的**合同标记**，服务端按它放行「老用户直接返 Key」，必须为 `agent`、不得传 skill 标识；调用来源统计走请求头 `X-Dknowc-Attribution` 的 `agentSource` 字段，值由脚本自动读包根 `attribution.json`，两者互不影响）。平台要求 Agent 先答一道文字题再发码，题目由 Agent 当场计算，**不把题目发给用户**：
+skills.sh 版不内置 API Key。MaaS 注册取 Key 三步执行（`scripts/register_key.mjs`，固定 `type=11`、渠道码 `8C8D411C-6A46-4E99-887D-87D9A1329930`、`source="agent"`——注册 body 的 `source` 是注册 API 的**合同标记**，服务端按它放行「老用户直接返 Key」，必须为 `agent`、不得传 skill 标识；调用来源统计走请求头 `X-Dknowc-Attribution` 的 `agentSource` 字段，值由脚本自动读包根 `attribution.json`，两者互不影响）。平台要求 Agent 先答一道文字题再发码，题目由 Agent 当场计算，**不把题目发给用户**：
 
 ```bash
 node {skillDir}/scripts/register_key.mjs challenge --phone <手机号>
@@ -52,7 +71,7 @@ answer 提交答案；答对即申请发码，按退出码分流：
 node {skillDir}/scripts/register_key.mjs register --phone <手机号> --vcode <验证码> --organ 个人 --name 用户
 ```
 
-手机号已注册时默认查回已有 Key。register 可能返回 `pending:true`（账号已创建、密钥准备中）——**非错误**：不重新注册、不重新发码，等用户示意后用同一手机号与验证码重试一次（短信码 5 分钟有效）。脚本各分支输出 `user_message`（成功/格式错/验证码错/已存在未取回/网络异常/新建 Key 失败沿用原 Key），**必须原样转述给用户**；手机号全程脱敏。注册成功后脚本自动把 Key 写入本机专用配置文件（`~/.config/dknowc/api_key`，600 权限、仅本机）并清理历史 `~/.zshrc` 块，后续任务直读文件、无需重复注册；仅当落盘失败时脚本才返回明文 Key 供当前任务注入 `DKNOWC_API_KEY`。不在对话中回显完整访问密钥（与密码同理，防截屏泄露）。默认不重新生成 Key；用户明确要求时才加 `--new-key`。用户不希望脚本注册时，给出降级地址 `https://platform.dknowc.cn/auth/#/login`。
+手机号已注册时默认查回已有 Key。register 可能返回 `pending:true`（账号已创建、密钥准备中）——**非错误**：不重新注册、不重新发码，等用户示意后用同一手机号与验证码重试一次（短信码 5 分钟有效）。脚本各分支输出 `user_message`（成功/格式错/验证码错/已存在未取回/网络异常/新建 Key 失败沿用原 Key），**必须原样转述给用户**；手机号全程脱敏。注册成功后脚本自动把 Key 写入本机专用配置文件（`~/.config/dknowc/api_key`，600 权限、仅本机），后续任务直读文件、无需重复注册（不修改 `~/.zshrc`；如需清理历史块，显式传 `--clean-zshrc`）；仅当落盘失败时脚本才返回明文 Key 供当前任务注入 `DKNOWC_API_KEY`。不在对话中回显完整访问密钥（与密码同理，防截屏泄露）。默认不重新生成 Key；用户明确要求时才加 `--new-key`。用户不希望脚本注册时，给出降级地址 `https://platform.dknowc.cn/auth/#/login`。
 
 领题状态由脚本自行保存（`~/.config/dknowc/maas_agent_challenge.json`，600 权限，含会话 Cookie、题目与 attempt），challenge 与 answer 之间不需要也不允许手工传 token；发码成功、转人工或终态失败后脚本自动清除。同一手机号存在未过期题目时复用，不重复领题。
 

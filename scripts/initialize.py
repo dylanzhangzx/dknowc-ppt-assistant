@@ -5,9 +5,9 @@ Public 版统一只从环境变量 DKNOWC_API_KEY 读取 API Key。
 
 职责划分：
 - 本脚本只报告环境状态，不自行决定是否阻断任务。
-- `ready` 只表示基础运行环境（python3、requests）就绪。
-- `search_ready` 表示可调用深知可信检索（API Key 已配置且 requests 可用）。
-- `pptx_ready` 表示可直接执行 SVG→PPTX 编译导出（python-pptx + XlsxWriter 可用）。
+- `ready` 只表示基础运行环境（python3）就绪。
+- `search_ready` 表示可调用深知可信检索（API Key 已配置；检索走标准库 urllib，不依赖 requests）。
+- `pptx_ready` 表示可直接执行 SVG→PPTX 编译导出（python-pptx 可用；XlsxWriter 为可选增强）。
   依赖缺失时可用 `uv run --with python-pptx --with XlsxWriter python3 ...` 隔离提供，
   此时素材检索与 SVG 创作不受影响。
 """
@@ -49,7 +49,7 @@ def _looks_like_key(value: str) -> bool:
 
 def check_api_key_config():
     # 环境变量优先，缺失时从 ~/.zshrc 兜底解析（宿主进程早于 key 写入启动、
-    # 或宿主不再加载 ~/.zshrc 导出变量时不误报缺失，与公文写作同源方案）
+    # 或宿主不再加载 ~/.zshrc 导出变量时不误报缺失，与同源方案）
     try:
         from api_key import resolve_api_key
         api_key, source = resolve_api_key()
@@ -93,20 +93,18 @@ def check_environment():
     python3_available = shutil.which("python3") is not None
     requests_available = _module_available("requests")
     python_pptx_available = _module_available("pptx")
-    xlsxwriter_available = _module_available("XlsxWriter")
+    xlsxwriter_available = _module_available("xlsxwriter")  # 实际 import 名为小写
     config_status = check_api_key_config()
 
     blocking_issues = []
     if not python3_available:
         blocking_issues.append("python3_missing")
-    if not requests_available:
-        blocking_issues.append("requests_missing")
+    # requests 仅作可选依赖提示：检索走标准库 urllib，不因缺少 requests 阻断任何能力
 
     pptx_blocking_issues = []
     if not python_pptx_available:
         pptx_blocking_issues.append("python_pptx_missing")
-    if not xlsxwriter_available:
-        pptx_blocking_issues.append("xlsxwriter_missing")
+    # XlsxWriter 为可选增强（无它时走 openpyxl / 内置回退，默认导出不生成 workbook），不作阻断项
 
     search_blocking_issues = []
     if not config_status["api_key_configured"]:
@@ -147,10 +145,10 @@ def check_environment():
         "api_key_env": API_KEY_ENV,
         "api_key_source": config_status["api_key_source"],
         "api_key_hint": config_status["api_key_hint"],
-        "search_ready": config_status["api_key_configured"] and requests_available,
+        "search_ready": config_status["api_key_configured"] and python3_available,
         "search_blocking_issues": search_blocking_issues,
         # PPT 编译依赖缺失不阻断其他环节：可用 uv run --with 隔离提供。
-        "pptx_ready": python3_available and python_pptx_available and xlsxwriter_available,
+        "pptx_ready": python3_available and python_pptx_available,
         "pptx_blocking_issues": pptx_blocking_issues,
         "pptx_hint": (
             "SVG 编译导出可用 `uv run --with python-pptx --with XlsxWriter python3 ...` 隔离提供依赖；"

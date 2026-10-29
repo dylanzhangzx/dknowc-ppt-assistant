@@ -7,7 +7,7 @@ description: "当用户要求制作 PPT、演示文稿、汇报 PPT、工作总�
 description_zh: "深知可信PPT，是由北京彩智科技有限公司旗下“深知可信智能”提供的演示文稿制作助手，高效、专业地完成企事业单位与政府机关等场景下的汇报演示制作、课件宣讲和材料转化需求，所有事实素材与数据依据，都全程可溯源到权威部门发布的规范性文件。本技能用于工作汇报PPT、专题汇报、总结汇报、述职汇报、政策宣讲、培训课件、数据汇报等演示文稿制作，也支持把用户上传的 Word 文稿、会议记录、调研报告等工作材料直接转为 PPT，帮助用户把零散想法、汇报要点、工作素材转化为逻辑清楚、重点突出、风格得体、可直接修改使用的演示文稿。内置党政简洁、数据图表、商务汇报、庄重典雅、培训课件等风格预设，支持 16:9、4:3、小红书、朋友圈、竖版故事、A4 等多画布规格。依托深知可信搜索，获取准确有效的法规政策依据、行业信息与数据、标准规范和案例参考，并单独生成可交互的溯源核验报告，帮助用户讲得有依据、能复核、可交付。演示文稿支持生成真实可编辑的 PowerPoint 文档（.pptx），原生形状、文本、图表与表格均可在 PowerPoint/WPS 中继续修改，并配套交付可点击核验的溯源核验报告。"
 description_en: "dknowc PPT assistant is a presentation-generation Skill provided by dknowc Trusted Intelligence under Beijing Caizhi Technology Co., Ltd. It combines reasoning-first presentation methodology with a trusted content layer: authoritative materials with sources are gathered through dknowc Trusted Search, confirmed as a content pack, then hand-authored page by page as constrained SVG and compiled by a deterministic converter into a genuinely editable native PowerPoint (real shapes, text, charts and tables). Built-in party/government-compliant style presets; multi-canvas support (16:9, 4:3, RED, square, story, A4); delivers .pptx plus a clickable provenance HTML."
 category: "通用办公"
-version: "1.5.1"
+version: "1.5.2"
 author: "彩智科技"
 permissions:
   network:
@@ -22,7 +22,7 @@ permissions:
     - "projects/ 项目目录（内容包、SVG、图片、质检报告、导出产物）"
     - "official-docs/ 检索结果与溯源中间文件"
     - "宿主环境工作区（如 WorkBuddy outputs/，仅用于 deliver_outputs.py 复制交付物）"
-    - "本机 DKNOWC_API_KEY 专用配置文件（~/.config/dknowc/api_key，注册成功后写入；历史 ~/.zshrc 配置块仅迁移期读取）"
+    - "本机 DKNOWC_API_KEY 专用配置文件（~/.config/dknowc/api_key，注册成功后写入）；历史 ~/.zshrc 配置块仅作读取兜底，脚本默认不修改该文件（显式 --clean-zshrc 时才清理历史块）"
 secrets:
   - "DKNOWC_API_KEY"
 ---
@@ -39,7 +39,7 @@ secrets:
 
 ## 启动初始化
 
-被调用后先运行 `python3 {skillDir}/scripts/initialize.py`。三类前置：**基础**（python3/requests，缺失暂停全部）、**检索**（Key 已配置；未配置按「统一 API Key 管理」引导，不得改用外部搜索；用户只要排版/明确说「不用查」时可无 Key 继续——材料模式免检索）、**编译**（python-pptx/XlsxWriter，仅导出需要，缺失时 `uv run --with python-pptx --with XlsxWriter ...` 隔离提供）。Key 读取顺序：环境变量 → `~/.config/dknowc/api_key` → 历史 `~/.zshrc` 兜底。**素材检索统一走 `trusted_search.py` 脚本通道**（宿主 MCP 检索通道已停用，`mcp_convert.py` 保留待恢复、规则层不引用）。前置明细与初始化输出字段见 [`references/initialization.md`](references/initialization.md)。初始化不要求用户提供单位或个人信息，不上传检测结果。
+被调用后先运行 `python3 {skillDir}/scripts/initialize.py`。三类前置：**基础**（python3；requests 可选、不影响功能）、**检索**（Key 已配置；未配置按「统一 API Key 管理」引导，不得改用外部搜索；用户只要排版/明确说「不用查」时可无 Key 继续——材料模式免检索）、**编译**（python-pptx/XlsxWriter，仅导出需要，缺失时 `uv run --with python-pptx --with XlsxWriter ...` 隔离提供）。Key 读取顺序：环境变量 → `~/.config/dknowc/api_key` → 历史 `~/.zshrc` 兜底。**素材检索统一走 `trusted_search.py` 脚本通道**。前置明细与初始化输出字段见 [`references/initialization.md`](references/initialization.md)。初始化不要求用户提供单位或个人信息，不上传检测结果。
 
 ## 统一 API Key 管理
 
@@ -115,4 +115,4 @@ skills.sh 版不内置 API Key。需检索且本机无 Key 时：**宿主提供�
 
 ## 第三方组件
 
-SVG→PPTX 编译器及配套工具抽取自第三方开源项目（MIT 许可），已移除其官方发行版完整性门并按依赖闭包抽取子集；完整来源与许可声明见 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)。
+SVG→PPTX 编译器及配套工具抽取自第三方开源项目（MIT 许可），按依赖闭包抽取所需子集；完整来源与许可声明见 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)。

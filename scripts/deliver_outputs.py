@@ -425,9 +425,9 @@ def collect_files(args_files: list[str]) -> list[Path]:
             p = Path(name).expanduser()
             if not p.is_absolute():
                 p = (SKILL_ROOT / p).resolve() if (SKILL_ROOT / p).is_file() else p.resolve()
-            # 交付物类型白名单（对齐公文写作 3.9.2 同款防护）：只接受 .pptx 与 .html。
+            # 交付物类型白名单：只接受 .pptx 与 .html。
             # .md / .clean.md / .json 等一律是中间产物（渲染器的 clean.md、检索 JSON、
-            # 答案文件），把它们复制到宿主工作区＝交付事故（豆包实测发生过）。
+            # 答案文件），把它们复制到宿主工作区会造成交付混乱。
             if p.suffix.lower() not in (".pptx", ".html"):
                 rejected.append(str(p))
                 continue

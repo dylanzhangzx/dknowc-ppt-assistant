@@ -14,15 +14,18 @@ https://github.com/dylanzhangzx/dknowc-ppt-assistant
 
 Title:
 
-v1.5.1 - GitHub public release
+v1.5.2 - GitHub public release
 
 Body:
 
 This is the skills.sh GitHub public release of 深知可信PPT (dknowc PPT assistant), an Agent Skill that generates genuinely editable native PowerPoint presentations with authoritative, source-linked content.
 
-Highlights (v1.5.1):
+Highlights (v1.5.2):
 
 - Uses the skills.sh channel configuration.
+- v1.5.2 is an audit-remediation release. Scripts no longer modify `~/.zshrc` by default (legacy key blocks are read-only fallback; cleanup requires the explicit `--clean-zshrc` flag). Registration and search endpoints are allowlisted to HTTPS hosts `platform.dknowc.cn` / `open.dknowc.cn` (tests can opt out with `DKNOWC_ALLOW_ANY_ENDPOINT=1`; rejections emit `ENDPOINT_REJECTED` and exit 1). If persisting the key fails, the plaintext key is written to `~/.config/dknowc/api_key.pending` (mode 600) and only the `pendingKeyFile` path is printed.
+- v1.5.2 also standardizes export and dependency policy: export commands must pass `-o` with a fixed output name (`projects/<name>/exports/<deck>.pptx`, which also backs up `svg_output`), all commands are documented as run from the skill root, `python-pptx` is the only hard export dependency (`requests` and `XlsxWriter` are optional), `references/initialization.md` gains a complete dependency list, and unreferenced upstream docs plus obsolete scripts were removed.
+
 - v1.5.1 realigns the registration flow with the platform's new MaaS agent-text challenge (mirroring the official-document skill's 3.9.3): the old `send` step is replaced by a three-step flow - `challenge` (fetch the official agent registration guide, receive a text question, persist the challenge session), `answer` (submit a non-negative integer answer; the agent solves the question itself, and neither the question nor the token ever enters the conversation), then `register`. If the guide is unavailable the script automatically falls back to the legacy direct-SMS branch (`flow: "legacy"`), equivalent for the user.
  - Challenge state (session cookie, token, attempt) is persisted locally under 600 permissions, auto-cleared on terminal outcomes, and reused while unexpired. New AGENT_TEXT_* error stops (retry with a new question up to 3 attempts, target-locked, service-unavailable, result-unknown) are wired into the onboarding scripts, the S3 series is restructured (question answering is invisible to the user), and the S5 pending-key message is added.
 

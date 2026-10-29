@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // 国内 MaaS 注册助手（供 skill 调用；纯 node，内置 fetch，无三方依赖）。
 //   node register_key.mjs [--guide URL] challenge --phone <p> [--channel <c>]
+//   可选 --clean-zshrc：显式清理 ~/.zshrc 中的历史 Key 标记块（默认不修改该文件）
 //     读官方 Agent 注册指引 → 申请一道文字题 → 本机保存会话与题目；退出 0 返回题目，
 //     退出 2 表示平台要求人工图片验证（返回 verificationUrl），退出 1 为失败。
 //   node register_key.mjs answer --phone <p> --answer <非负整数>
@@ -43,17 +44,41 @@ const FALLBACK_REGISTER_URL = MAAS_PLATFORM_URL;
 // 2026-10-29 Agent 注册：官方机器可读指引与注册页。指引里 challenge/submit 是相对地址，
 // 必须相对「指引的最终响应 URL」解析，保留认证代理前缀（不得相对 SPA 的 #/agent-register 解析）。
 const DEFAULT_GUIDE = "https://platform.dknowc.cn/maas/identity-center/maas/login/open-api/maas/identity/v1/agent-registration-guide";
+
+// 端点域名白名单：注册/发码/指引三类地址默认只允许官方域名且必须 HTTPS，
+// 防止 --base / --guide / --open-base 把手机号或密钥发往任意主机。
+// 本地测试（mock 服务）可用 DKNOWC_ALLOW_ANY_ENDPOINT=1 显式放开。
+const ALLOWED_ENDPOINT_HOSTS = new Set(["platform.dknowc.cn", "open.dknowc.cn"]);
+function assertEndpointAllowed(rawUrl, flagName) {
+  const raw = String(rawUrl || "");
+  if (process.env.DKNOWC_ALLOW_ANY_ENDPOINT === "1") return raw;
+  let u;
+  const fail = (reason) => {
+    emit(errorPayload(
+      "ENDPOINT_REJECTED",
+      null,
+      `${flagName} ${reason}。仅允许 HTTPS 的 platform.dknowc.cn / open.dknowc.cn；如确需自定义端点，请设置 DKNOWC_ALLOW_ANY_ENDPOINT=1。`,
+    ), 1);
+  };
+  try { u = new URL(raw); } catch { fail(`不是合法 URL（${raw}）`); }
+  if (u.protocol !== "https:" || !ALLOWED_ENDPOINT_HOSTS.has(u.hostname)) {
+    fail(`指向非官方主机（${u.protocol}//${u.hostname}）`);
+  }
+  return raw;
+}
 // 挑战状态（Cookie / token / attempt / 题目）落盘，供 challenge 与 answer 两次调用之间传递。
 // attempt 必须始终使用服务端返回值，刷新题目不增加机会，故本机只做保存、不改写。
 const CHALLENGE_STATE_FILE = "maas_agent_challenge.json";
 // Key 持久化目标：本机专用配置文件（XDG 规范路径），不再写 ~/.zshrc。
 // 3.7.5 迁移：写入新文件成功后，清理 ~/.zshrc 中的历史 Key 块。
 const KEY_FILE_NAME = "api_key";
-const ZSHRC_START = "# >>> dknowc official doc writer api key >>>";
-const ZSHRC_END = "# <<< dknowc official doc writer api key <<<";
-// 历史 ~/.zshrc 标记块（含旧名），迁移期统一清理
+const ZSHRC_START = "# >>> dknowc ppt assistant api key >>>";
+const ZSHRC_END = "# <<< dknowc ppt assistant api key <<<";
+// 历史 ~/.zshrc 标记块（历史版本与历史产品名）。注意：脚本默认**不修改** ~/.zshrc；
+// 仅当用户显式传 --clean-zshrc 时才清理这些块（历史块只作读取兜底，见 api_key.py）。
 const LEGACY_BLOCKS = [
   [ZSHRC_START, ZSHRC_END],
+  ["# >>> dknowc official doc writer api key >>>", "# <<< dknowc official doc writer api key <<<"],
   ["# >>> dknowc api key >>>", "# <<< dknowc api key <<<"],
 ];
 
@@ -339,7 +364,7 @@ function writeApiKeyToConfigFile(apiKey) {
   try {
     fs.mkdirSync(path.dirname(filePath), { recursive: true, mode: 0o700 });
     fs.writeFileSync(filePath, `${String(apiKey).trim()}\n`, { encoding: "utf8", mode: 0o600 });
-    removeLegacyZshrcBlocks();
+    // 不自动修改 ~/.zshrc：历史块只作读取兜底；清理需用户显式 --clean-zshrc
     return { written: true, path: filePath, error: null };
   } catch (e) {
     return { written: false, path: filePath, error: e && e.message ? e.message : String(e) };
@@ -406,7 +431,7 @@ function errorPayload(code, userMessage, instruction) {
 
 async function main() {
   const a = parseArgs(process.argv.slice(2));
-  const base = a.base || DEFAULT_BASE;
+  const base = assertEndpointAllowed(a.base || DEFAULT_BASE, "--base");
   const cmd = a._[0];
 
   if (cmd === "save-key") {
@@ -433,7 +458,9 @@ async function main() {
       process.exit(1);
     }
     const w = writeApiKeyToConfigFile(apiKey);
+    const zshrcCleaned = (w.written && a["clean-zshrc"]) ? (removeLegacyZshrcBlocks(), true) : false;
     console.log(JSON.stringify({
+      zshrcCleaned,
       status: w.written,
       envWriteSucceeded: w.written,
       envWriteTarget: w.path,
@@ -456,7 +483,7 @@ async function main() {
     if (!/^1[3-9][0-9]{9}$/.test(phone)) {
       emit(errorPayload("PHONE_INVALID", "这个手机号格式好像不对，麻烦核对一下再发我。", "不重发、不换号，等用户提供正确手机号。"), 1);
     }
-    const guideUrl = a.guide && a.guide !== true ? String(a.guide) : DEFAULT_GUIDE;
+    const guideUrl = assertEndpointAllowed(a.guide && a.guide !== true ? String(a.guide) : DEFAULT_GUIDE, "--guide");
     const channel = a.channel && a.channel !== true ? String(a.channel) : DEFAULT_CHANNEL;
 
     // 同号未过期的题直接复用：刷新题目不增加机会、不延长到期时间，也不该重复请求服务端
@@ -805,7 +832,7 @@ async function main() {
         ? a["new-key-remark"]
         : "由深知可信PPT按用户要求重新生成";
       const { result, apiKey } = await createNewApiKey(
-        a["open-base"] && a["open-base"] !== true ? a["open-base"] : DEFAULT_OPEN_BASE,
+        assertEndpointAllowed(a["open-base"] && a["open-base"] !== true ? a["open-base"] : DEFAULT_OPEN_BASE, "--open-base"),
         data.apiKey,
         keyName,
         keyRemark,
@@ -821,6 +848,18 @@ async function main() {
     const zshrcWrite = ok && apiKeyToSave && !a["no-zshrc"]
       ? writeApiKeyToConfigFile(apiKeyToSave)
       : { written: false, path: apiKeyFilePath(), error: null };
+    // 落盘失败时：把明文 Key 写入仅当前用户可读的待用文件（600），stdout 只给路径与掩码，
+    // 避免完整密钥出现在对话框/宿主 UI 回显里。Agent 从该文件读取注入环境变量后即可删除。
+    const zshrcCleaned = (zshrcWrite.written && a["clean-zshrc"]) ? (removeLegacyZshrcBlocks(), true) : false;
+    let pendingKeyFile = null;
+    if (ok && apiKeyToSave && !zshrcWrite.written && !a["no-zshrc"]) {
+      try {
+        const pendingPath = path.join(configDir(), "api_key.pending");
+        fs.mkdirSync(configDir(), { recursive: true, mode: 0o700 });
+        fs.writeFileSync(pendingPath, `${String(apiKeyToSave).trim()}\n`, { encoding: "utf8", mode: 0o600 });
+        pendingKeyFile = pendingPath;
+      } catch { /* 临时文件也写不了时，才退回明文输出 */ }
+    }
     // user_message：给用户的固定话术，Agent 必须原样转述，不得改写后发挥。
     // 权益告知（注册赠送 10 万积分 + 实名认证再送 10 万积分）已前移到开通引导
     // （initialize.guide_message / onboarding_scripts S1），此处只做轻确认，避免成功节点信息过重导致转述截断。
@@ -853,15 +892,19 @@ async function main() {
       envName: API_KEY_ENV,
       // 明文 Key 只在"未写入本机配置文件、必须靠它临时注入环境变量"时才输出，其余情况
       // 只给掩码——脚本输出可能被宿主 UI 回显或模型贴进对话
-      apiKey: (apiKeyToSave && !zshrcWrite.written && !a["no-zshrc"]) ? apiKeyToSave : null,
+      apiKey: (apiKeyToSave && !zshrcWrite.written && !a["no-zshrc"] && !pendingKeyFile) ? apiKeyToSave : null,
+      pendingKeyFile,
       apiKeyMasked: apiKeyToSave ? `${apiKeyToSave.slice(0, 7)}...${apiKeyToSave.slice(-4)}` : null,
+      zshrcCleaned,
       envWriteRequired: Boolean(apiKeyToSave) && !zshrcWrite.written,
       envWriteTarget: zshrcWrite.path,
       envWriteSucceeded: Boolean(zshrcWrite.written),
       envWriteError: zshrcWrite.error,
       envWriteInstruction: zshrcWrite.written
         ? `已写入 ${zshrcWrite.path}；脚本直读该文件，无需重启宿主，本次不再返回明文密钥。`
-        : `未能写入 ${zshrcWrite.path}，本次已在 apiKey 字段返回明文，请由 Agent 临时注入环境变量 ${API_KEY_ENV}（不得展示给用户、不得写入公开文件）。`,
+        : (pendingKeyFile
+          ? `未能写入 ${zshrcWrite.path}；明文 Key 已写入仅本用户可读的 ${pendingKeyFile}（600 权限），请由 Agent 读取该文件临时注入环境变量 ${API_KEY_ENV}，用完删除该文件；不得展示给用户、不得写入公开文件。`
+          : `未能写入 ${zshrcWrite.path}，本次已在 apiKey 字段返回明文，请由 Agent 临时注入环境变量 ${API_KEY_ENV}（不得展示给用户、不得写入公开文件）。`),
       currentSessionInstruction: `当前任务继续执行初始化时，请用本次返回的 apiKey 临时注入环境变量 ${API_KEY_ENV}，不得向用户展示完整 Key。`,
       newKeyError,
       fallbackRegisterUrl: FALLBACK_REGISTER_URL,
