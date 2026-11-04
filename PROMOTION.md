@@ -14,15 +14,18 @@ https://github.com/dylanzhangzx/dknowc-ppt-assistant
 
 Title:
 
-v1.5.2 - GitHub public release
+v1.6.0 - GitHub public release
 
 Body:
 
 This is the skills.sh GitHub public release of 深知可信PPT (dknowc PPT assistant), an Agent Skill that generates genuinely editable native PowerPoint presentations with authoritative, source-linked content.
 
-Highlights (v1.5.2):
+Highlights (v1.6.0):
 
 - Uses the skills.sh channel configuration.
+- v1.6.0 adds a version self-check with guided upgrade: on startup `initialize.py` anonymously queries the public MaaS skill catalog and reports an `update` field when the registered version is newer than the local one (never prompting downgrades; 24-hour per-slug cache, 3-second silent-failure timeout, `DKNOWC_UPDATE_CHECK=0` opt-out, and hard validation of catalog entries — numeric versions only, official-OSS download prefix, package name must equal the target slug). The new `scripts/update_skill.py` is a guided upgrade executor: it downloads the official package only after explicit user consent and validates the package against the catalog-registered target name, so channel-specific name forms (e.g. lowercase names required by some platforms) upgrade cleanly.
+- v1.6.0 also removes the legacy `type=11` parameter from the registration payload, and SKILL.md gains a version self-check and guided-upgrade section with the full registration flow detail living in `references/initialization.md`.
+
 - v1.5.2 is an audit-remediation release. Scripts no longer modify `~/.zshrc` by default (legacy key blocks are read-only fallback; cleanup requires the explicit `--clean-zshrc` flag). Registration and search endpoints are allowlisted to HTTPS hosts `platform.dknowc.cn` / `open.dknowc.cn` (tests can opt out with `DKNOWC_ALLOW_ANY_ENDPOINT=1`; rejections emit `ENDPOINT_REJECTED` and exit 1). If persisting the key fails, the plaintext key is written to `~/.config/dknowc/api_key.pending` (mode 600) and only the `pendingKeyFile` path is printed.
 - v1.5.2 also standardizes export and dependency policy: export commands must pass `-o` with a fixed output name (`projects/<name>/exports/<deck>.pptx`, which also backs up `svg_output`), all commands are documented as run from the skill root, `python-pptx` is the only hard export dependency (`requests` and `XlsxWriter` are optional), `references/initialization.md` gains a complete dependency list, and unreferenced upstream docs plus obsolete scripts were removed.
 

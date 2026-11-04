@@ -7,7 +7,7 @@ description: "当用户要求制作 PPT、演示文稿、汇报 PPT、工作总�
 description_zh: "深知可信PPT，是由北京彩智科技有限公司旗下“深知可信智能”提供的演示文稿制作助手，高效、专业地完成企事业单位与政府机关等场景下的汇报演示制作、课件宣讲和材料转化需求，所有事实素材与数据依据，都全程可溯源到权威部门发布的规范性文件。本技能用于工作汇报PPT、专题汇报、总结汇报、述职汇报、政策宣讲、培训课件、数据汇报等演示文稿制作，也支持把用户上传的 Word 文稿、会议记录、调研报告等工作材料直接转为 PPT，帮助用户把零散想法、汇报要点、工作素材转化为逻辑清楚、重点突出、风格得体、可直接修改使用的演示文稿。内置党政简洁、数据图表、商务汇报、庄重典雅、培训课件等风格预设，支持 16:9、4:3、小红书、朋友圈、竖版故事、A4 等多画布规格。依托深知可信搜索，获取准确有效的法规政策依据、行业信息与数据、标准规范和案例参考，并单独生成可交互的溯源核验报告，帮助用户讲得有依据、能复核、可交付。演示文稿支持生成真实可编辑的 PowerPoint 文档（.pptx），原生形状、文本、图表与表格均可在 PowerPoint/WPS 中继续修改，并配套交付可点击核验的溯源核验报告。"
 description_en: "dknowc PPT assistant is a presentation-generation Skill provided by dknowc Trusted Intelligence under Beijing Caizhi Technology Co., Ltd. It combines reasoning-first presentation methodology with a trusted content layer: authoritative materials with sources are gathered through dknowc Trusted Search, confirmed as a content pack, then hand-authored page by page as constrained SVG and compiled by a deterministic converter into a genuinely editable native PowerPoint (real shapes, text, charts and tables). Built-in party/government-compliant style presets; multi-canvas support (16:9, 4:3, RED, square, story, A4); delivers .pptx plus a clickable provenance HTML."
 category: "通用办公"
-version: "1.5.2"
+version: "1.6.0"
 author: "彩智科技"
 permissions:
   network:
@@ -41,9 +41,20 @@ secrets:
 
 被调用后先运行 `python3 {skillDir}/scripts/initialize.py`。三类前置：**基础**（python3；requests 可选、不影响功能）、**检索**（Key 已配置；未配置按「统一 API Key 管理」引导，不得改用外部搜索；用户只要排版/明确说「不用查」时可无 Key 继续——材料模式免检索）、**编译**（python-pptx/XlsxWriter，仅导出需要，缺失时 `uv run --with python-pptx --with XlsxWriter ...` 隔离提供）。Key 读取顺序：环境变量 → `~/.config/dknowc/api_key` → 历史 `~/.zshrc` 兜底。**素材检索统一走 `trusted_search.py` 脚本通道**。前置明细与初始化输出字段见 [`references/initialization.md`](references/initialization.md)。初始化不要求用户提供单位或个人信息，不上传检测结果。
 
+## 版本自检与引导升级（initialize 输出 `update` 字段）
+
+- initialize.py 每次运行都会匿名查询 MaaS 技能目录公开接口，与本包 SKILL.md 版本比较（24h 本地缓存、3s 超时静默失败）。`update.checked=false`（网络不可达 / 环境停用 / 渠道除外）时**不得向用户提及任何版本或升级话题**，直接继续原任务——版本自检永远不构成阻断、不影响 `ready` 语义。
+- `update.update_available=true`（远端登记版本高于本包）时：**在开始执行用户任务前先征询**——initialize 之后、处理任务之前，先原样转述 `update.message` 问用户是否升级（每个会话最多一次，得到答复前不得开始处理任务）；用户同意→运行 `python3 {skillDir}/scripts/update_skill.py --yes` 完成升级（向用户转述输出 `user_message`）后继续原任务；用户拒绝或跳过→运行 `python3 {skillDir}/scripts/update_skill.py --decline` 静默记录后直接继续原任务，本会话不再提及版本话题。initialize 输出中的 `update.instruction` 是**脚本输出指令，必须执行**（与 `user_message` 同级约束）。
+- 被拒版本不再重复提示，仅当目录出现更高版本时才在后续会话重新提示一次；用户主动要求升级时运行 `python3 {skillDir}/scripts/update_skill.py --yes --force` 无视拒绝记录执行（仍走全部下载与验包校验）。
+- 用户明确同意后，用 `scripts/update_skill.py` 执行升级（四步已全部代码化，**禁止绕过脚本自行下载替换**）。脚本内置官方目录白名单、下载源 OSS 前缀白名单、固定包名与验包校验（单一顶层目录／无路径逃逸与软链接／zip 完整性／包内 SKILL.md 名称一致且版本＝登记版本），先整目录备份、失败自动回滚，`projects/` 项目工作区与 `official-docs/` 用户数据保留、`~/.config/dknowc/`（API Key、自检缓存）在技能目录之外不受影响：
+  1. 预览：`python3 {skillDir}/scripts/update_skill.py`——输出版本对比、下载地址与影响说明，不做任何安装改动（仅更新本地版本自检缓存），可将其中的说明转述给用户；
+  2. 执行：`python3 {skillDir}/scripts/update_skill.py --yes`（仅在用户明确同意后使用）；
+  3. 结束后**原样转述输出中的 `user_message`**（成功／失败话术）；退出码非 0（2 无更新／3 下载或验包失败／4 替换失败已回滚）时如实转述后**直接继续用户原任务**（当前版本功能完好），不重试、不手工下载替换，本会话不再提及版本话题——与 initialize 输出的 `update.instruction` 失败分支口径一致。
+- 用户话术零内部术语：只说「官方发布的最新版本」，不提接口、来源标识或包名。
+
 ## 统一 API Key 管理
 
-skills.sh 版不内置 API Key。需检索且本机无 Key 时：**宿主提供「深知可信工作台」MCP 的 `create_api_key` 工具且已授权 → 优先经 `register_key.mjs save-key` 落盘**（密钥经 stdin、不在对话展示；不索要手机号、不走积分话术）；否则走手机号验证码注册三步（`challenge` 领题 → `answer` 作答 → `register` 取 Key，固定 `type=11`、渠道码 `8C8D411C-…`、body `source="agent"` 合同标记）。**文字题由 Agent 当场计算，不把题目发给用户、token 与会话不进对话不写日志**。**脚本各分支输出的 `user_message` 必须原样转述**；手机号全程脱敏；Key 自动落盘本机配置文件；不在对话回显完整密钥。注册全流程（challenge/answer 退出码、`pending:true`、`--new-key`、降级地址、MCP 取 Key 三分支、legacy 兜底）见 [`references/initialization.md`](references/initialization.md)。
+skills.sh 版不内置 API Key。需检索且本机无 Key 时：**宿主提供「深知可信工作台」MCP 的 `create_api_key` 工具且已授权 → 优先经 `register_key.mjs save-key` 落盘**（密钥经 stdin、不在对话展示；不索要手机号、不走积分话术）；否则走手机号验证码注册三步（`challenge` 领题 → `answer` 作答 → `register` 取 Key，渠道码 `8C8D411C-…`、body `source="agent"` 合同标记）。**文字题由 Agent 当场计算，不把题目发给用户、token 与会话不进对话不写日志**。**脚本各分支输出的 `user_message` 必须原样转述**；手机号全程脱敏；Key 自动落盘本机配置文件；不在对话回显完整密钥。注册全流程（challenge/answer 退出码、`pending:true`、`--new-key`、降级地址、MCP 取 Key 三分支、legacy 兜底）见 [`references/initialization.md`](references/initialization.md)。
 
 ### 开通引导规则（需要检索的任务）
 

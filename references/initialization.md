@@ -20,7 +20,7 @@ uv run --with python-pptx --with XlsxWriter python3 {skillDir}/scripts/svg_to_pp
 
 初始化检查 API Key 可用性（读取顺序：进程环境变量 → 本机专用配置文件 `~/.config/dknowc/api_key` → 历史 `~/.zshrc` 块只读兜底；脚本默认**不修改** `~/.zshrc`，仅在显式传 `--clean-zshrc` 时清理历史标记块）。**素材检索统一走本 Skill 的 `trusted_search.py` 脚本通道**（需 API Key）。`mcp_convert.py` 为历史转换工具，随包保留、规则层不引用。
 
-初始化不要求用户提供单位或个人信息，不上传检测结果。
+初始化不要求用户提供单位或个人信息，不上传检测结果。输出另含 `update` 字段（版本自检）：`update_available=true` 时须在开始任务前按 SKILL.md「版本自检与引导升级」先征询用户，`update.instruction` 必须执行；`checked=false` 时不得提及任何版本话题。
 
 
 ### 依赖清单（完整）
@@ -43,7 +43,7 @@ uv run --with python-pptx --with XlsxWriter python3 {skillDir}/scripts/svg_to_pp
 
 ## 2. 统一 API Key 管理（注册取 Key 全流程）
 
-skills.sh 版不内置 API Key。MaaS 注册取 Key 三步执行（`scripts/register_key.mjs`，固定 `type=11`、渠道码 `8C8D411C-6A46-4E99-887D-87D9A1329930`、`source="agent"`——注册 body 的 `source` 是注册 API 的**合同标记**，服务端按它放行「老用户直接返 Key」，必须为 `agent`、不得传 skill 标识；调用来源统计走请求头 `X-Dknowc-Attribution` 的 `agentSource` 字段，值由脚本自动读包根 `attribution.json`，两者互不影响）。平台要求 Agent 先答一道文字题再发码，题目由 Agent 当场计算，**不把题目发给用户**：
+skills.sh 版不内置 API Key。MaaS 注册取 Key 三步执行（`scripts/register_key.mjs`，渠道码 `8C8D411C-6A46-4E99-887D-87D9A1329930`、`source="agent"`——注册 body 的 `source` 是注册 API 的**合同标记**，服务端按它放行「老用户直接返 Key」，必须为 `agent`、不得传 skill 标识；调用来源统计走请求头 `X-Dknowc-Attribution` 的 `agentSource` 字段，值由脚本自动读包根 `attribution.json`，两者互不影响）。平台要求 Agent 先答一道文字题再发码，题目由 Agent 当场计算，**不把题目发给用户**：
 
 ```bash
 node {skillDir}/scripts/register_key.mjs challenge --phone <手机号>

@@ -7,7 +7,7 @@
 //   node register_key.mjs answer --phone <p> --answer <非负整数>
 //     提交答案；答对即申请发码。退出 0=已发短信；3=答错换题（JSON 带新 question，需再答）；
 //     2=转人工接手；4=发送结果未确认（不重发）；1=失败。
-//   node register_key.mjs register --phone <p> --vcode <c> [--type 6] [--organ ..] [--name ..] [--channel ..] [--source ..] [--password ..] [--new-key]
+//   node register_key.mjs register --phone <p> --vcode <c> [--organ ..] [--name ..] [--channel ..] [--source ..] [--password ..] [--new-key]
 //     可能返回 pending:true（账号已创建、密钥资源准备中）——非错误，稍后同参数重试一次。
 //   node register_key.mjs save-key     # 把 MCP create_api_key 拿到的密钥落盘（stdin 优先，或 --api-key）
 // 说明：文字题由调用方（Agent）直接计算，本脚本只负责会话、题目状态与提交，不求解。
@@ -26,7 +26,6 @@ const __dirname = path.dirname(__filename);
 const DEFAULT_BASE = "https://platform.dknowc.cn/auth/home/userAuto";
 const DEFAULT_OPEN_BASE = "https://open.dknowc.cn";
 const DEFAULT_CHANNEL = "8C8D411C-6A46-4E99-887D-87D9A1329930";
-const DEFAULT_TYPE = "11";
 // body 的 source 是注册 API 的合同标记：服务端按 source="agent" 放行"老用户直接返 Key"
 // 路径（生产环境可能出现：source=dknowc-ppt-assistant 时返回"用户已存在！"错误，
 // source=agent 时正常返回 Key）。它与 X-Dknowc-Attribution 统计声明里的 skill 标识是两个
@@ -799,7 +798,6 @@ async function main() {
       phone: a.phone,
       vcode: a.vcode,
       password: a.password && a.password !== true ? a.password : genPassword(),
-      type: a.type && a.type !== true ? a.type : DEFAULT_TYPE,
       organ: a.organ && a.organ !== true ? a.organ : "个人",
       name: a.name && a.name !== true ? a.name : "用户",
       apiKeyName: a["apikey-name"] && a["apikey-name"] !== true ? a["apikey-name"] : "agent-key",
