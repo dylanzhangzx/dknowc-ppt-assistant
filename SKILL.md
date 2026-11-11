@@ -3,11 +3,11 @@ name: "深知可信PPT"
 slug: "dknowc-ppt-assistant-skills-sh"
 display_name: "深知可信PPT"
 display_name_en: "dknowc PPT assistant"
-description: "当用户要求制作 PPT、演示文稿、汇报 PPT、工作总结汇报、课件、宣讲材料、把材料转成 PPT、做幻灯片，或要求可编辑原生 PPT、多版式（16:9/4:3/小红书/朋友圈/竖版/A4）输出时，使用深知可信PPT。生成侧采用约束 SVG → 原生 DrawingML 编译路线：主 Agent 逐页手写约束 SVG，确定性编译器导出真实可编辑的 PowerPoint（原生形状/文本/图表/表格，非整页图片）；内容侧完全使用深知可信智能 API：通过深知可信搜索检索权威政策、数据与案例素材，全程可溯源。内置党政简洁、数据图表、商务汇报、庄重典雅、培训课件等风格预设，默认交付 .pptx 与溯源核验报告。"
-description_zh: "深知可信PPT，是由北京彩智科技有限公司旗下“深知可信智能”提供的演示文稿制作助手，高效、专业地完成企事业单位与政府机关等场景下的汇报演示制作、课件宣讲和材料转化需求，所有事实素材与数据依据，都全程可溯源到权威部门发布的规范性文件。本技能用于工作汇报PPT、专题汇报、总结汇报、述职汇报、政策宣讲、培训课件、数据汇报等演示文稿制作，也支持把用户上传的 Word 文稿、会议记录、调研报告等工作材料直接转为 PPT，帮助用户把零散想法、汇报要点、工作素材转化为逻辑清楚、重点突出、风格得体、可直接修改使用的演示文稿。内置党政简洁、数据图表、商务汇报、庄重典雅、培训课件等风格预设，支持 16:9、4:3、小红书、朋友圈、竖版故事、A4 等多画布规格。依托深知可信搜索，获取准确有效的法规政策依据、行业信息与数据、标准规范和案例参考，并单独生成可交互的溯源核验报告，帮助用户讲得有依据、能复核、可交付。演示文稿支持生成真实可编辑的 PowerPoint 文档（.pptx），原生形状、文本、图表与表格均可在 PowerPoint/WPS 中继续修改，并配套交付可点击核验的溯源核验报告。"
+description: "当用户要求制作 PPT、演示文稿、汇报 PPT、工作总结汇报、课件、宣讲材料、把材料转成 PPT、做幻灯片，或要求可编辑原生 PPT、多版式（16:9/4:3/小红书/朋友圈/竖版/A4）输出时，使用深知可信PPT。生成侧采用约束 SVG → 原生 DrawingML 编译路线：主 Agent 逐页手写约束 SVG，确定性编译器导出真实可编辑的 PowerPoint（原生形状/文本/图表/表格，非整页图片）；内容侧优先使用深知可信智能 API：通过深知可信搜索检索权威政策、数据与案例素材，全程可溯源；权威库暂无支撑时补充公开网络材料并逐条标注非官方来源。内置党政简洁、数据图表、商务汇报、庄重典雅、培训课件等风格预设，默认交付 .pptx 与溯源核验报告。"
+description_zh: "深知可信PPT，是由北京彩智科技有限公司旗下“深知可信智能”提供的演示文稿制作助手，高效、专业地完成企事业单位与政府机关等场景下的汇报演示制作、课件宣讲和材料转化需求，事实素材与数据依据优先取自权威部门发布的规范性文件并全程可溯源；权威库暂无支撑时补充公开网络材料并逐条标注非官方来源。本技能用于工作汇报PPT、专题汇报、总结汇报、述职汇报、政策宣讲、培训课件、数据汇报等演示文稿制作，也支持把用户上传的 Word 文稿、会议记录、调研报告等工作材料直接转为 PPT，帮助用户把零散想法、汇报要点、工作素材转化为逻辑清楚、重点突出、风格得体、可直接修改使用的演示文稿。内置党政简洁、数据图表、商务汇报、庄重典雅、培训课件等风格预设，支持 16:9、4:3、小红书、朋友圈、竖版故事、A4 等多画布规格。依托深知可信搜索，获取准确有效的法规政策依据、行业信息与数据、标准规范和案例参考，并单独生成可交互的溯源核验报告，帮助用户讲得有依据、能复核、可交付。演示文稿支持生成真实可编辑的 PowerPoint 文档（.pptx），原生形状、文本、图表与表格均可在 PowerPoint/WPS 中继续修改，并配套交付可点击核验的溯源核验报告。"
 description_en: "dknowc PPT assistant is a presentation-generation Skill provided by dknowc Trusted Intelligence under Beijing Caizhi Technology Co., Ltd. It combines reasoning-first presentation methodology with a trusted content layer: authoritative materials with sources are gathered through dknowc Trusted Search, confirmed as a content pack, then hand-authored page by page as constrained SVG and compiled by a deterministic converter into a genuinely editable native PowerPoint (real shapes, text, charts and tables). Built-in party/government-compliant style presets; multi-canvas support (16:9, 4:3, RED, square, story, A4); delivers .pptx plus a clickable provenance HTML."
 category: "通用办公"
-version: "1.6.0"
+version: "1.6.1"
 author: "彩智科技"
 permissions:
   network:
@@ -31,7 +31,7 @@ secrets:
 
 深知可信PPT由北京彩智科技有限公司旗下“深知可信智能”提供，是把**原生生成架构**（约束 SVG → DrawingML 编译）与**深知可信内容层**（可信搜索 + 全程溯源）结合的演示文稿 Skill。
 
-定位一句话：**内容可信是我们的，排版专业是编译器的**。生成侧主 Agent 逐页手写约束 SVG、确定性编译器导出真实可编辑的原生 PowerPoint；内容侧所有事实素材来自深知可信搜索的权威文件库，每个数据、每条政策可溯源。
+定位一句话：**内容可信是我们的，排版专业是编译器的**。生成侧主 Agent 逐页手写约束 SVG、确定性编译器导出真实可编辑的原生 PowerPoint；内容侧事实素材优先来自深知可信搜索的权威文件库，每个数据、每条政策可溯源；库内无支撑时按降级链补公开网络材料并标注非官方来源。
 
 ## 权限说明
 
@@ -86,7 +86,7 @@ skills.sh 版不内置 API Key。需检索且本机无 Key 时：**宿主提供�
 
 完整步骤、确认门与强制命令见 [`workflows/generate-pptx.md`](workflows/generate-pptx.md)。核心硬规则：
 
-1. **检索方案确认门**：主题模式下先展示检索方案（地域、每条 query 原文与信息需求、素材类型、使用边界），用户确认后执行 `scripts/trusted_search.py`——同方案内多路**默认并行**（每路独立 `--output`，单批不超过 4 路，后台并行、全部结束后逐路检查结果）；失败路单独串行重试一次；任意一路额度用尽整批即停；平台明显限流（多路同时报错）回退逐路串行。
+1. **检索方案确认门**：主题模式下先展示检索方案（地域、每条 query 原文与信息需求、素材类型、使用边界），用户确认后执行 `scripts/trusted_search.py`——同方案内多路**默认并行**（每路独立 `--output`，单批不超过 4 路，后台并行、全部结束后逐路检查结果）；失败路单独串行重试一次；任意一路额度用尽整批即停；平台明显限流（多路同时报错）回退逐路串行。**素材维度补搜后仍无结果或核心事实无支撑时按「联网检索降级链」降级**（阶段二 `--search-channel webSearch` → 阶段三宿主 WebSearch 经 `websearch_convert.py` 转换、`merge_search_results.py` 合并；外部材料统一标「非官方来源」、不单独支撑关键数据、不进原生图表）。
 2. **结构方案确认门**：内容包（核心信息/叙事/页面规划/素材清单）+ 风格预设一起确认后，才创建项目、写 SVG。
 3. **主 Agent 逐页手写 SVG**：遵循 [`references/svg-authoring.md`](references/svg-authoring.md) 的元素契约与排版纪律；禁止脚本批量生成页面。
 4. **质检判据与循环纪律**：通过判据＝`svg_quality_checker.py` 退出码 0 且 **errors=0**（`passed-with-warnings` 即通过，warnings 一律不阻断导出与交付）；质检→修复循环**最多 3 轮**、每轮只修 errors 与明显事实性错误；**导出后不回头**（不再质检/不再截图自检/不再微调重导，重跑仅限用户明确要求修改）。导出用 `svg_to_pptx.py`（quick 无锁模式），产物是**原生可编辑** .pptx，不得降级为整页图片。

@@ -353,7 +353,14 @@ def source_from_article(item: Dict[str, Any], index: int, segment: Optional[Dict
     source["expiry_date"] = first_str(item.get("失效日期"), item.get("expiry_date"))
     source["article_type"] = first_str(item.get("文章类型"), item.get("article_type"))
     # 所属搜索条件（多路检索分组）与引用状态（未引用=接口召回但正文未采用）
-    source["search_key"] = first_str(item.get("搜索条件"), item.get("search_key"))
+    source["search_key"] = user_facing_text(first_str(item.get("搜索条件"), item.get("search_key")))
+    # 检索通道（深知可信搜索 / 深知可信搜索·联网 / 宿主 WebSearch）：由检索/转换脚本打标、
+    # merge 透传，供过程回顾按通道拆分；历史 JSON 无该字段时为空（渲染层回退旧口径）
+    source["channel"] = first_str(item.get("检索通道"), item.get("channel"))
+    # 非官方来源：联网路（searchChannel=webSearch）与宿主 WebSearch 转换产物召回的非权威材料。
+    # 双口径判定：检索/转换脚本打标 非官方来源=True；或接口 dataAuthority 返回 数据权威性=非权威。
+    source["unofficial"] = bool(item.get("非官方来源")) or str(
+        item.get("数据权威性") or item.get("authority") or "").strip() in ("非权威", "non-authoritative")
     source["used"] = item.get("已引用", item.get("used", True))
     if not isinstance(source["used"], bool):
         source["used"] = True
@@ -579,6 +586,32 @@ def classify_check_value(raw: Any) -> Tuple[str, str]:
     return "none", text
 
 
+# 用户可见报告不得暴露内部检索实现（三阶段/联网通道）；自检说明与分组标签里模型常写这些词，
+# 渲染前统一换成用户能理解的口径。只作用于自检说明与分组标签，不改正文与材料内容。
+USER_FACING_REPLACEMENTS = (
+    ("宿主 WebSearch", "公开网络检索"),
+    ("外部联网材料", "公开网络材料"),
+    ("外部联网", "公开网络"),
+    ("可信联网", "可信搜索"),
+    ("阶段三", "补充检索"),
+    ("阶段二", "补充检索"),
+    ("阶段一", "检索"),
+    # 外部来源只标「非官方来源」；核验由 AI 完成，不再叠加「待核验」
+    ("非官方来源 · 待核验", "非官方来源"),
+    ("（非官方来源，待核验）", "（非官方来源）"),
+    ("(非官方来源，待核验)", "(非官方来源)"),
+    ("非官方来源/待核验", "非官方来源"),
+    ("非官方来源、待核验", "非官方来源"),
+)
+
+
+def user_facing_text(text: str) -> str:
+    out = str(text or "")
+    for src, dst in USER_FACING_REPLACEMENTS:
+        out = out.replace(src, dst)
+    return out
+
+
 def normalize_self_check(raw: Any) -> Optional[Dict[str, Tuple[str, str]]]:
     if not isinstance(raw, dict):
         return None
@@ -591,6 +624,8 @@ def normalize_self_check(raw: Any) -> Optional[Dict[str, Tuple[str, str]]]:
         if label is None:
             continue
         status, note = classify_check_value(value)
+        # 自检说明同样面向用户：渲染前清洗内部术语（阶段X/可信联网/宿主 WebSearch → 用户口径）
+        note = user_facing_text(note)
         items[label] = (status, note)
     return items or None
 
@@ -687,7 +722,7 @@ def compute_verification(answer: str, sources: List[Dict[str, str]], payload: Di
         "coverage": coverage,
         "self_check": self_check,
         "policy_count": policy_count,
-        "manual_checks": [str(x) for x in (payload.get("verificationChecks") or payload.get("verification_checks") or []) if str(x).strip()],
+        "manual_checks": [user_facing_text(x) for x in (payload.get("verificationChecks") or payload.get("verification_checks") or []) if str(x).strip()],
     }
 
 
@@ -746,6 +781,7 @@ def compute_process_stats(sources: List[Dict[str, str]], answer: str,
         "n_searches": n_searches,
         "has_cond_detail": bool(cond_rows),
         "n_materials": len(sources),
+        "n_external": sum(1 for sc in sources if sc.get("unofficial")),
         "used_count": used_count,
         "unused_count": unused_count,
         "n_cite_marks": n_cite_marks,
@@ -1007,6 +1043,9 @@ def parse_answer_blocks(answer: str, valid_ids: set, chip_map: Optional[Dict[str
             quote = ""
         site_html = (f'<span class="jb-site"><span class="dot"></span>{esc(jb.get("site") or "")}</span>'
                      if (jb.get("site") or "").strip() else "")
+        if jb.get("unofficial"):
+            site_html = ('<span class="jb-unofficial" title="公开网络检索的非官方来源，仅供参考，建议以官方口径复核">非官方来源</span>'
+                         + site_html)
         return (
             f'<span class="jb" data-cite="{esc(cid)}">'
             f'<button class="jb-name" type="button" aria-expanded="false">{CARET_SVG}'
@@ -1149,6 +1188,7 @@ def build_chip_data(sources: List[Dict[str, str]]) -> Dict[str, Dict[str, Any]]:
         url = source.get("url") if (source.get("url") and source["url"] != "接口未返回") else (source.get("policy_url") or "")
         site_bits = ([source["doc_number"]] if source.get("doc_number") else []) + meta_bits
         chip_map[cid] = {
+            "unofficial": bool(source.get("unofficial")),
             "title": short(source.get("title") or "未命名来源文章", 30),
             "site": " · ".join(site_bits) or "来源站点",
             "url": url,
@@ -1418,8 +1458,10 @@ def render_source_card(source: Dict[str, str], for_print: bool = False) -> str:
         id_html = "".join(f'<span class="sc-id">[{esc(i)}]</span>' for i in ids)
     else:
         id_html = '<span class="sc-unused">未引用</span>'
+    unofficial_badge = ('<span class="sc-unofficial" title="公开网络检索的非官方来源，仅供参考，建议以官方口径复核">非官方来源</span>'
+                        if source.get("unofficial") else "")
     body_html = (f'<div class="sc-head">{id_html}'
-                 f'<span class="sc-type">{esc(source["type_label"])}</span>{conf_badge}{vk}</div>'
+                 f'<span class="sc-type">{esc(source["type_label"])}</span>{conf_badge}{unofficial_badge}{vk}</div>'
                  f'<h4>{esc(source.get("title"))}</h4>'
                  f'<div class="sc-meta">{esc(meta)}</div>'
                  f'{note_html}'
@@ -1475,7 +1517,10 @@ def render_process_bar(stats: Dict[str, Any], verification: Dict[str, Any]) -> s
     step4_label = "核验完成" if ov["passed"] else "核验未完全通过"
     step4_sub = "结论：正文依据逐条对过原文" if ov["passed"] else esc(short("；".join(ov["reasons"]) or "见核验报告单", 30))
     n_supp = stats.get("n_supplement") or 0
-    step1_title = f"深知检索 {stats['n_searches']} 路" + (f" · 补搜 {n_supp} 次" if n_supp else "")
+    n_external = int(stats.get("n_external") or 0)
+    step1_title = (f"深知检索 {stats['n_searches']} 路"
+                   + (f" · 补搜 {n_supp} 次" if n_supp else "")
+                   + (f" · 公开资料补充 {n_external} 条" if n_external else ""))
     return f"""
     <section class="process" aria-label="生成过程回顾">
       <div class="p-head"><b>过程回顾</b><span>数字来自本次任务的真实记录</span></div>
@@ -1555,7 +1600,7 @@ def render_library_view(sources: List[Dict[str, str]], hot_terms: List[str]) -> 
       </div>
       <div class="lib-list" id="lib-list">{cards_html}</div>
       <div class="lib-empty hide" id="lib-empty">没有符合当前筛选的来源文章。</div>
-      <div class="lib-foot">材料来源：深知可信搜索 · 每条摘录均取自原文原段</div>
+      <div class="lib-foot">材料来源：深知可信搜索{(" · 部分材料来自公开网络，已标注非官方来源" if any(sc.get("unofficial") for sc in sources) else "")} · 每条摘录均取自原文原段</div>
     </section>"""
 
 
@@ -1889,6 +1934,10 @@ a.jb-quote{text-decoration:none}
 .scard.hl{box-shadow:0 0 0 3px rgba(139,92,246,.35),var(--shadow-2)}
 .scard.hide{display:none}
 .sc-head{display:flex;align-items:center;gap:7px;margin-bottom:6px}
+.jb-unofficial{display:inline-flex;align-items:center;font-size:10.5px;font-weight:700;color:#9a3412;background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:0 7px;margin-right:6px;white-space:nowrap}
+.sc-unofficial{display:inline-flex;align-items:center;font-size:10.5px;font-weight:700;color:#9a3412;background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:0 7px;white-space:nowrap}
+.body-external-note{max-width:860px;margin:0 auto 10px;padding:7px 12px;font-size:12px;line-height:1.6;color:#7c5a16;background:#fffbeb;border:1px solid #fde68a;border-radius:8px}
+@media print{.body-external-note{border-color:#d9c37f}}
 .sc-id{font-family:monospace;font-weight:800;font-size:11px;color:#fff;background:var(--grad);
   border-radius:5px;padding:1px 8px}
 .sc-type{font-size:11px;font-weight:700;border-radius:4px;padding:1px 8px;background:var(--ref-soft);color:var(--ref)}
@@ -2446,6 +2495,15 @@ def render_html(payload: Dict[str, Any], title: str, answer_override: str = "", 
         origin_html = (f'<div class="hero-q"><span class="q-tag">原问题</span>'
                        f'<span class="q-txt">{esc(origin_question)}</span></div>')
 
+    # 非官方材料提示条（三阶段降级链）：材料池含外部联网材料时，正文文档流顶部
+    # 统一提示「本页部分材料来自公开网络」——用户可见口径零内部术语，
+    # 具体逐条标记由来源卡/引文胶囊上的「非官方来源」徽标表达。
+    has_external = any(sc.get("unofficial") for sc in sources)
+    external_note_html = (
+        '<div class="body-external-note">说明：本页部分材料来自公开网络，'
+        '已逐条标注「非官方来源」，仅供参考，建议以官方口径复核。</div>'
+        if has_external else "")
+
     jb_tables_json = dumps_for_script(jb_tables)
     jb_tables_script = (f'<script type="application/json" id="jb-tables">{jb_tables_json}</script>\n'
                         if jb_tables else "")
@@ -2459,6 +2517,9 @@ def render_html(payload: Dict[str, Any], title: str, answer_override: str = "", 
         meta_bits.append(f"正文引用 {process_stats['n_cite_marks']} 处")
     meta_bits.append(f"生成于 {generated}")
     meta_line = " · ".join(meta_bits)
+    # 素材来源后缀：材料池含非官方（外部联网）材料时提示来源性质（用户口径零内部术语）
+    source_suffix = (" · 部分材料来自公开网络，已标注非官方来源"
+                     if any(sc.get("unofficial") for sc in sources) else "")
 
     return f"""<!doctype html>
 <html lang="zh-CN">
@@ -2498,8 +2559,8 @@ def render_html(payload: Dict[str, Any], title: str, answer_override: str = "", 
 <div class="hero">
   <div class="r-badge">{esc(report_label)}</div>
   <h1>{esc(display_title)}</h1>
-  {origin_html}
-  <div class="meta">{esc(meta_line)} ｜ 素材来源：深知可信搜索</div>
+  {origin_html}{external_note_html}
+  <div class="meta">{esc(meta_line)} ｜ 素材来源：深知可信搜索{source_suffix}</div>
   <div class="hero-switch">
     <div class="view-switch" role="tablist" aria-label="视图切换">
       <button class="on" data-view="report" type="button">核验报告</button>

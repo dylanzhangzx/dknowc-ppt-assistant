@@ -132,6 +132,10 @@ def _build_payload(args: argparse.Namespace) -> Dict[str, Any]:
         raise SystemExit("错误：--material-length 必须为正整数")
     payload: Dict[str, Any] = {
         "query": args.query,
+        # 联网搜索模式：searchChannel 单值传 webSearch，
+        # 返回真实互联网内容（网页正文段落+源网址，可溯源到原段）；dataAuthority 随联网路自动开——
+        # 返回文章级 数据权威性 标注（联网结果为"非权威"），供渲染层打"非官方来源"徽标。
+        "dataAuthority": bool(getattr(args, "data_authority", False) or getattr(args, "search_channel", "") == "webSearch"),
         "searchType": [search_type],
         "policy": False if args.no_policy else True,
         "item": False if args.no_item else True,
@@ -155,6 +159,10 @@ def _build_payload(args: argparse.Namespace) -> Dict[str, Any]:
     if eff_time:
         payload["eff_time"] = _list_arg(_validate_eff_time(eff_time))
 
+    search_channel = getattr(args, "search_channel", "") or ""
+    if search_channel:
+        # 单值（与 searchType 同理）：govSearch/webSearch/wxSearch 一次只传一个
+        payload["searchChannel"] = [search_channel]
     return payload
 
 
@@ -404,6 +412,14 @@ def main() -> None:
     parser.add_argument("--segment-count", type=int, help="每篇材料最多返回段落数（默认 4，V2 定档）")
     parser.add_argument("--search-type", help="V2 必填单值：policy / govSite / affair / qa / private（默认 policy；"
                                               "多值报错——多类来源分路调用后合并）")
+    parser.add_argument("--search-channel", default="",
+                        choices=["webSearch", "govSearch", "wxSearch"],
+                        help="动态搜索渠道（单值，三阶段降级链阶段二）：webSearch=自动联网搜索模式"
+                             "（返回互联网网页正文段落+源网址，可溯源到原段；dataAuthority 自动开启，"
+                             "联网路材料统一标「非官方来源」）；govSearch=政府站定向；wxSearch=微信生态。"
+                             "默认不传=只查深知库内")
+    parser.add_argument("--data-authority", action="store_true",
+                        help="请求返回文章级 数据权威性 标注（联网路自动开启，无需显式传）")
     parser.add_argument("--material-length", type=int, help="返回材料总字符上限（默认 18000，V2 定档）")
     parser.add_argument("--simplified", action="store_true", help="精炼输出（会丢存档快照 screenShotPath，默认关闭）")
     parser.add_argument("--no-simplified", action="store_true", help="兼容保留：默认已不精炼，无需传此参数")
@@ -443,6 +459,16 @@ def main() -> None:
     if args.json_only:
         # 落盘前校验业务码：错误响应不落盘、不报"已保存"
         _bail_if_biz_error(body)
+        # 联网路（searchChannel=webSearch）打标：每篇材料注入 检索通道 与 非官方来源
+        # （渲染层按 非官方来源=True + 数据权威性=非权威 双口径打"非官方来源"徽标）
+        if getattr(args, "search_channel", "") == "webSearch":
+            _content = body.get("content") if isinstance(body.get("content"), dict) else {}
+            _data = _content.get("data") if isinstance(_content.get("data"), dict) else {}
+            for _a in (_data.get("检索文章") or []):
+                if isinstance(_a, dict):
+                    if not _a.get("检索通道"):
+                        _a["检索通道"] = "深知可信搜索·联网"
+                    _a["非官方来源"] = True
         raw_json = json.dumps(body, ensure_ascii=False, indent=2)
         if args.output:
             output_path = resolve_output_json(args.output)

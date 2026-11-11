@@ -14,15 +14,18 @@ https://github.com/dylanzhangzx/dknowc-ppt-assistant
 
 Title:
 
-v1.6.0 - GitHub public release
+v1.6.1 - GitHub public release
 
 Body:
 
 This is the skills.sh GitHub public release of 深知可信PPT (dknowc PPT assistant), an Agent Skill that generates genuinely editable native PowerPoint presentations with authoritative, source-linked content.
 
-Highlights (v1.6.0):
+Highlights (v1.6.1):
 
 - Uses the skills.sh channel configuration.
+- v1.6.1 adds a three-stage retrieval fallback chain: the authoritative in-library search is always tried first; when a topic, material dimension, or core fact has no support, the skill degrades to trusted online search (`--search-channel webSearch`) and then, if still insufficient, to the host environment's WebSearch, whose results are converted by `websearch_convert.py` and merged by `merge_search_results.py`. External materials are uniformly marked "unofficial source", never independently support key data, and never enter native charts; the provenance report adds unofficial-source badges and a notice bar, and cleans user-facing replacement wording.
+- v1.6.1 also adds `--data-authority` routing for the trusted-online stage and extends the self-check discipline to review items and manual checks, keeping the report's wording consistent end to end.
+
 - v1.6.0 adds a version self-check with guided upgrade: on startup `initialize.py` anonymously queries the public MaaS skill catalog and reports an `update` field when the registered version is newer than the local one (never prompting downgrades; 24-hour per-slug cache, 3-second silent-failure timeout, `DKNOWC_UPDATE_CHECK=0` opt-out, and hard validation of catalog entries — numeric versions only, official-OSS download prefix, package name must equal the target slug). The new `scripts/update_skill.py` is a guided upgrade executor: it downloads the official package only after explicit user consent and validates the package against the catalog-registered target name, so channel-specific name forms (e.g. lowercase names required by some platforms) upgrade cleanly.
 - v1.6.0 also removes the legacy `type=11` parameter from the registration payload, and SKILL.md gains a version self-check and guided-upgrade section with the full registration flow detail living in `references/initialization.md`.
 
